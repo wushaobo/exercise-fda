@@ -8,6 +8,7 @@ import com.hsbc.fds.syncfacade.grpc.PendingRequestRegistry;
 import com.hsbc.fds.syncfacade.model.DetectionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.CompletableFuture;
 
 @Component
+@ConditionalOnProperty(name = "fds.redis.enabled", havingValue = "true", matchIfMissing = true)
 public class ResultSubscriber implements MessageListener {
 
     private static final Logger log = LoggerFactory.getLogger(ResultSubscriber.class);
