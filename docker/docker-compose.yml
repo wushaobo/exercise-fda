@@ -1,0 +1,80 @@
+services:
+  localstack:
+    image: localstack/localstack:4.3
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs
+      - AWS_DEFAULT_REGION=ap-southeast-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ./localstack-init:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  sync-facade:
+    build:
+      context: ../services/sync-facade
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      - SERVER_PORT=8080
+      - FDS_GRPC_PORT=9090
+      - FDS_SQS_TICKET_QUEUE_URL=http://localstack:4566/000000000000/fds-ticket-queue
+      - FDS_REDIS_ENABLED=true
+      - FDS_REDIS_RESULT_CHANNEL=fds:results
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY=test
+      - SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY=test
+      - SPRING_CLOUD_AWS_REGION_STATIC=ap-southeast-1
+      - SPRING_CLOUD_AWS_SQS_ENDPOINT=http://localstack:4566
+      - FDS_REQUEST_TIMEOUT_MILLIS=5000
+    depends_on:
+      localstack:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  rule-check-worker:
+    build:
+      context: ../services/rule-check-worker
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      - FDS_SQS_TICKET_QUEUE_URL=http://localstack:4566/000000000000/fds-ticket-queue
+      - FDS_REDIS_ENABLED=true
+      - FDS_REDIS_RESULT_CHANNEL=fds:results
+      - FDS_REDIS_RESULT_TTL_SECONDS=300
+      - FDS_REDIS_DENYLIST_KEY=fds:denylist
+      - FDS_DENYLIST_REFRESH_INTERVAL_SECONDS=60
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY=test
+      - SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY=test
+      - SPRING_CLOUD_AWS_REGION_STATIC=ap-southeast-1
+      - SPRING_CLOUD_AWS_SQS_ENDPOINT=http://localstack:4566
+      - FDS_RULES_AMOUNT_THRESHOLD=10000.0
+    depends_on:
+      localstack:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
