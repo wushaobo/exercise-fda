@@ -28,7 +28,7 @@ public class DenylistRule implements FraudRule {
         this.denylist = Set.copyOf(accounts);
     }
 
-    Set<String> getDenylist() {
+    public Set<String> getDenylist() {
         return denylist;
     }
 }
