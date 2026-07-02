@@ -10,3 +10,7 @@ fds:
     ticket-queue-url: http://localhost:4566/000000000000/fds-ticket-queue
   rules:
     amount-threshold: 10000.0
+  redis:
+    enabled: false
+    result-channel: fds:results
+    result-ttl-seconds: 300
