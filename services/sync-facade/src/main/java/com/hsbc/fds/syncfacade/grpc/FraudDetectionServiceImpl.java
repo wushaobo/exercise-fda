@@ -10,9 +10,12 @@ import com.hsbc.fds.syncfacade.model.TransactionCheckTask;
 import io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDetectionServiceImplBase {
@@ -23,9 +26,15 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final TicketQueueService ticketQueueService;
+    private final PendingRequestRegistry registry;
+    private final long timeoutMillis;
 
-    public FraudDetectionServiceImpl(TicketQueueService ticketQueueService) {
+    public FraudDetectionServiceImpl(TicketQueueService ticketQueueService,
+                                     PendingRequestRegistry registry,
+                                     @Value("${fds.request.timeout-millis:500}") long timeoutMillis) {
         this.ticketQueueService = ticketQueueService;
+        this.registry = registry;
+        this.timeoutMillis = timeoutMillis;
     }
 
     @Override
@@ -36,27 +45,33 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
         log.info("Received check request, requestId={}, transactionId={}, amount={}",
                 requestId, request.getTransactionId(), request.getAmount());
 
-        TransactionCheckTask task = new TransactionCheckTask(
-                requestId,
-                request.getTransactionId(),
-                request.getPayerAccountId(),
-                request.getPayeeAccountId(),
-                request.getAmount(),
-                request.getCurrency()
-        );
+        CompletableFuture<TransactionCheckResponse> future = new CompletableFuture<>();
+        registry.register(requestId, future);
 
-        ticketQueueService.sendTask(task);
+        try {
+            TransactionCheckTask task = new TransactionCheckTask(
+                    requestId,
+                    request.getTransactionId(),
+                    request.getPayerAccountId(),
+                    request.getPayeeAccountId(),
+                    request.getAmount(),
+                    request.getCurrency()
+            );
+            ticketQueueService.sendTask(task);
 
-        // TODO: PendingRequestRegistry + Future will be added in next task
-        TransactionCheckResponse response = TransactionCheckResponse.newBuilder()
-                .setTransactionId(request.getTransactionId())
-                .setVerdict(FraudVerdict.CLEAR)
-                .setReason(FraudReason.NONE)
-                .setMessage("Request accepted, pending processing")
-                .build();
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+            // Virtual thread blocks here until completed or timeout
+            TransactionCheckResponse response = future.get(timeoutMillis, TimeUnit.MILLISECONDS);
+            responseObserver.onNext(response);
+        } catch (java.util.concurrent.TimeoutException e) {
+            log.warn("Request timed out, requestId={}", requestId);
+            responseObserver.onNext(buildTimeoutResponse(request.getTransactionId()));
+        } catch (Exception e) {
+            log.error("Unexpected error, requestId={}", requestId, e);
+            responseObserver.onNext(buildErrorResponse(request.getTransactionId()));
+        } finally {
+            registry.remove(requestId);
+            responseObserver.onCompleted();
+        }
     }
 
     static String generateRequestId(String upstreamTraceId) {
@@ -65,5 +80,23 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
             suffix.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
         }
         return upstreamTraceId + "-" + suffix;
+    }
+
+    private TransactionCheckResponse buildTimeoutResponse(String transactionId) {
+        return TransactionCheckResponse.newBuilder()
+                .setTransactionId(transactionId)
+                .setVerdict(FraudVerdict.CLEAR)
+                .setReason(FraudReason.NONE)
+                .setMessage("Request timed out")
+                .build();
+    }
+
+    private TransactionCheckResponse buildErrorResponse(String transactionId) {
+        return TransactionCheckResponse.newBuilder()
+                .setTransactionId(transactionId)
+                .setVerdict(FraudVerdict.CLEAR)
+                .setReason(FraudReason.NONE)
+                .setMessage("Internal error")
+                .build();
     }
 }
