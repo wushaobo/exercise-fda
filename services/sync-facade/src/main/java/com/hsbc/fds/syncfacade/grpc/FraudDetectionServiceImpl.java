@@ -27,19 +27,28 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
 
     private final TicketQueueService ticketQueueService;
     private final PendingRequestRegistry registry;
+    private final ConcurrencyLimiter limiter;
     private final long timeoutMillis;
 
     public FraudDetectionServiceImpl(TicketQueueService ticketQueueService,
                                      PendingRequestRegistry registry,
+                                     ConcurrencyLimiter limiter,
                                      @Value("${fds.request.timeout-millis:500}") long timeoutMillis) {
         this.ticketQueueService = ticketQueueService;
         this.registry = registry;
+        this.limiter = limiter;
         this.timeoutMillis = timeoutMillis;
     }
 
     @Override
     public void checkTransaction(TransactionCheckRequest request,
                                  StreamObserver<TransactionCheckResponse> responseObserver) {
+        if (!limiter.tryAcquire()) {
+            responseObserver.onNext(buildRateLimitedResponse(request.getTransactionId()));
+            responseObserver.onCompleted();
+            return;
+        }
+
         String requestId = generateRequestId(request.getUpstreamTraceId());
 
         log.info("Received check request, requestId={}, transactionId={}, amount={}",
@@ -59,7 +68,6 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
             );
             ticketQueueService.sendTask(task);
 
-            // Virtual thread blocks here until completed or timeout
             TransactionCheckResponse response = future.get(timeoutMillis, TimeUnit.MILLISECONDS);
             responseObserver.onNext(response);
         } catch (java.util.concurrent.TimeoutException e) {
@@ -70,6 +78,7 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
             responseObserver.onNext(buildErrorResponse(request.getTransactionId()));
         } finally {
             registry.remove(requestId);
+            limiter.release();
             responseObserver.onCompleted();
         }
     }
@@ -97,6 +106,15 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
                 .setVerdict(FraudVerdict.CLEAR)
                 .setReason(FraudReason.NONE)
                 .setMessage("Internal error")
+                .build();
+    }
+
+    private TransactionCheckResponse buildRateLimitedResponse(String transactionId) {
+        return TransactionCheckResponse.newBuilder()
+                .setTransactionId(transactionId)
+                .setVerdict(FraudVerdict.CLEAR)
+                .setReason(FraudReason.NONE)
+                .setMessage("Service overloaded, request degraded")
                 .build();
     }
 }

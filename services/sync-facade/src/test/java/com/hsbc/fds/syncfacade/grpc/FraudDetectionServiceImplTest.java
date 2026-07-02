@@ -2,6 +2,7 @@ package com.hsbc.fds.syncfacade.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.hsbc.fds.proto.FraudVerdict;
@@ -32,9 +33,14 @@ class FraudDetectionServiceImplTest {
     @Captor
     private ArgumentCaptor<TransactionCheckResponse> responseCaptor;
 
-    private FraudDetectionServiceImpl createService(long timeoutMillis) {
+    private FraudDetectionServiceImpl createService(long timeoutMillis, int maxInFlight) {
         PendingRequestRegistry registry = new PendingRequestRegistry();
-        return new FraudDetectionServiceImpl(ticketQueueService, registry, timeoutMillis);
+        ConcurrencyLimiter limiter = new ConcurrencyLimiter(maxInFlight, 50);
+        return new FraudDetectionServiceImpl(ticketQueueService, registry, limiter, timeoutMillis);
+    }
+
+    private FraudDetectionServiceImpl createService(long timeoutMillis) {
+        return createService(timeoutMillis, 100);
     }
 
     @Test
@@ -109,6 +115,18 @@ class FraudDetectionServiceImplTest {
         service.checkTransaction(request, responseObserver);
 
         verify(responseObserver).onCompleted();
+    }
+
+    @Test
+    void shouldReturnRateLimitedResponseWhenOverloaded() {
+        FraudDetectionServiceImpl service = createService(100L, 0);
+        TransactionCheckRequest request = buildRequest("tx-005");
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onNext(responseCaptor.capture());
+        assertThat(responseCaptor.getValue().getMessage())
+                .isEqualTo("Service overloaded, request degraded");
     }
 
     private TransactionCheckRequest buildRequest(String txId) {

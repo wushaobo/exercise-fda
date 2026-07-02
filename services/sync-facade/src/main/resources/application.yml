@@ -17,3 +17,6 @@ fds:
     result-channel: fds:results
   request:
     timeout-millis: 500
+  concurrency:
+    max-in-flight: 1000
+    acquire-timeout-millis: 50
