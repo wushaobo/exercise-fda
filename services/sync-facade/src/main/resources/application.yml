@@ -7,3 +7,9 @@ spring:
   threads:
     virtual:
       enabled: true
+
+fds:
+  grpc:
+    port: 9090
+  sqs:
+    ticket-queue-url: http://localhost:4566/000000000000/fds-ticket-queue

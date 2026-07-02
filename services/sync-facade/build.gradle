@@ -28,6 +28,7 @@ ext {
 dependencies {
     // Spring Boot
     implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-json'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     // gRPC (netty server, no servlet)
