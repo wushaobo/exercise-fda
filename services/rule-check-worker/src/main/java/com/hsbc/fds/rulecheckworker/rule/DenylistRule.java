@@ -1,0 +1,34 @@
+package com.hsbc.fds.rulecheckworker.rule;
+
+import com.hsbc.fds.rulecheckworker.model.DetectionResult;
+import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
+import org.springframework.stereotype.Component;
+
+import java.util.Optional;
+import java.util.Set;
+
+@Component
+public class DenylistRule implements FraudRule {
+
+    private volatile Set<String> denylist = Set.of();
+
+    @Override
+    public Optional<DetectionResult> check(TransactionCheckTask task) {
+        if (denylist.contains(task.getPayeeAccountId())) {
+            return Optional.of(DetectionResult.confirmedFraud(
+                    task.getRequestId(),
+                    task.getTransactionId(),
+                    "PAYEE_IN_DENYLIST",
+                    "Payee account " + task.getPayeeAccountId() + " is in denylist"));
+        }
+        return Optional.empty();
+    }
+
+    public void updateDenylist(Set<String> accounts) {
+        this.denylist = Set.copyOf(accounts);
+    }
+
+    Set<String> getDenylist() {
+        return denylist;
+    }
+}
