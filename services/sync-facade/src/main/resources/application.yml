@@ -13,3 +13,7 @@ fds:
     port: 9090
   sqs:
     ticket-queue-url: http://localhost:4566/000000000000/fds-ticket-queue
+  redis:
+    result-channel: fds:results
+  request:
+    timeout-millis: 500
