@@ -1,0 +1,9 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: sync-facade
+  threads:
+    virtual:
+      enabled: true

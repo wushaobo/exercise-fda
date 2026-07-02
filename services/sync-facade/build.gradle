@@ -1,0 +1,69 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.16'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.google.protobuf' version '0.9.6'
+    id 'idea'
+}
+
+group = 'com.hsbc.fds'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    grpcVersion = '1.76.3'
+    protobufVersion = '4.31.2'
+    protocVersion = protobufVersion
+    springCloudAwsVersion = '3.4.2'
+}
+
+dependencies {
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // gRPC (netty server, no servlet)
+    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    implementation "io.grpc:grpc-services:${grpcVersion}"
+
+    // AWS SQS
+    implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}")
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+
+    // Redis (Pub/Sub + result cache + denylist)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protocVersion}"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
