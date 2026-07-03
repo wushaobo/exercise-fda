@@ -1,9 +1,13 @@
 spring:
-  autoconfigure:
-    exclude:
-      - io.awspring.cloud.autoconfigure.sqs.SqsAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
-      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  cloud:
+    aws:
+      credentials:
+        access-key: test
+        secret-key: test
+      region:
+        static: us-east-1
+      sqs:
+        endpoint: http://localhost:4566
 
 fds:
   sqs:

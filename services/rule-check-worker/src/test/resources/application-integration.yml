@@ -1,0 +1,11 @@
+spring:
+  autoconfigure:
+    exclude: []
+
+fds:
+  redis:
+    enabled: true
+    result-channel: fds:results
+    result-ttl-seconds: 300
+  denylist:
+    refresh-interval-seconds: 9999
