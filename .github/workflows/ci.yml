@@ -31,18 +31,17 @@ jobs:
         run: |
           HTML="build/reports/jacoco/test/html/index.html"
           if [ -f "$HTML" ]; then
-            grep -o '<tfoot>.*</tfoot>' "$HTML" \
+            SUMMARY=$(grep -o '<tfoot>.*</tfoot>' "$HTML" \
               | sed 's|</td>| |g' \
               | sed 's/<[^>]*>//g' \
               | tr -d ',' \
-              | awk '{ printf "Lines: %d/%.0f, Instructions: %s, Branches: %s\n", $13-$12, $13, $5, $9 }'
+              | awk '{ printf "Lines: %d/%.0f, Instructions: %s, Branches: %s", $13-$12, $13, $5, $9 }')
+            echo "$SUMMARY"
+            echo "### ${{ matrix.service }} Coverage" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
           fi
-
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-${{ matrix.service }}
-          path: services/${{ matrix.service }}/build/reports/jacoco/test/html/
 
   build-images:
     name: Build Image / ${{ matrix.service }}
