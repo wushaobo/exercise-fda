@@ -1,0 +1,35 @@
+global:
+  image:
+    tag: latest
+
+syncFacade:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  requestTimeoutMillis: 5000
+
+ruleCheckWorker:
+  replicas: 1
+  image:
+    pullPolicy: IfNotPresent
+  denylist:
+    refreshIntervalSeconds: 5
+  hpa:
+    enabled: false
+
+aws:
+  region: ap-southeast-1
+  accessKeyId: test
+  secretAccessKey: test
+
+sqs:
+  ticketQueueUrl: http://host.k3d.internal:4566/000000000000/fds-ticket-queue
+  endpoint: http://host.k3d.internal:4566
+
+redis:
+  host: host.k3d.internal
+  port: 6379
+  password: ""
+
+ingress:
+  enabled: false

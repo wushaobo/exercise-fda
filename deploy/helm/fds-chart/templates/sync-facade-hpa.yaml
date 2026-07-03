@@ -1,0 +1,29 @@
+{{- if .Values.syncFacade.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sync-facade
+  labels:
+    {{- include "fds.labels" . | nindent 4 }}
+    app: sync-facade
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sync-facade
+  minReplicas: {{ .Values.syncFacade.hpa.minReplicas }}
+  maxReplicas: {{ .Values.syncFacade.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.syncFacade.hpa.targetCPU }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.syncFacade.hpa.targetMemory }}
+{{- end }}

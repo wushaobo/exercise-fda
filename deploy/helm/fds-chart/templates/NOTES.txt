@@ -1,0 +1,10 @@
+{{ .Chart.Name }} {{ .Chart.Version }} deployed to {{ .Release.Namespace }}.
+
+Sync Facade gRPC:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/sync-facade 9090:9090
+
+Run e2e tests:
+  cd e2e-test && gradle e2eClient -q
+
+Worker status:
+  kubectl get pods -n {{ .Release.Namespace }} -l app=rule-check-worker

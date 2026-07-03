@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rule-check-worker
+  labels:
+    {{- include "fds.labels" . | nindent 4 }}
+    app: rule-check-worker
+spec:
+  replicas: {{ .Values.ruleCheckWorker.replicas }}
+  selector:
+    matchLabels:
+      app: rule-check-worker
+  template:
+    metadata:
+      labels:
+        app: rule-check-worker
+    spec:
+      containers:
+        - name: rule-check-worker
+          image: {{ include "fds.ruleCheckWorker.image" . }}
+          imagePullPolicy: {{ .Values.ruleCheckWorker.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ruleCheckWorker.http.port }}
+              name: http
+          env:
+            - name: SERVER_PORT
+              value: {{ .Values.ruleCheckWorker.http.port | quote }}
+            - name: FDS_SQS_TICKET_QUEUE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: ticket-queue-url
+            - name: FDS_REDIS_ENABLED
+              value: {{ .Values.redis.enabled | quote }}
+            - name: FDS_REDIS_RESULT_CHANNEL
+              value: {{ .Values.redis.resultChannel | quote }}
+            - name: FDS_REDIS_RESULT_TTL_SECONDS
+              value: {{ .Values.redis.resultTtlSeconds | quote }}
+            - name: FDS_REDIS_DENYLIST_KEY
+              value: {{ .Values.redis.denylistKey | quote }}
+            - name: FDS_DENYLIST_REFRESH_INTERVAL_SECONDS
+              value: {{ .Values.ruleCheckWorker.denylist.refreshIntervalSeconds | quote }}
+            - name: FDS_RULES_AMOUNT_THRESHOLD
+              value: {{ .Values.ruleCheckWorker.rules.amountThreshold | quote }}
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: redis-host
+            - name: SPRING_DATA_REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fds-secret
+                  key: redis-password
+            - name: SPRING_CLOUD_AWS_REGION_STATIC
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: aws-region
+            - name: SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fds-secret
+                  key: aws-access-key-id
+            - name: SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fds-secret
+                  key: aws-secret-access-key
+            - name: SPRING_CLOUD_AWS_SQS_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: sqs-endpoint
+          resources:
+            {{- toYaml .Values.ruleCheckWorker.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - ps -ef | grep java | grep -v grep
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - ps -ef | grep java | grep -v grep
+            initialDelaySeconds: 10
+            periodSeconds: 5

@@ -1,6 +1,18 @@
+global:
+  image:
+    registry: ""  # ECR: <account>.dkr.ecr.ap-southeast-1.amazonaws.com
+    tag: latest
+    pullPolicy: IfNotPresent
+  namespace: fds
+
 syncFacade:
   replicas: 2
-  image: fds/sync-facade:latest
+  image:
+    pullPolicy: IfNotPresent
+  grpc:
+    port: 9090
+  http:
+    port: 8080
   resources:
     requests:
       cpu: 250m
@@ -9,13 +21,20 @@ syncFacade:
       cpu: 1000m
       memory: 1Gi
   hpa:
+    enabled: true
     minReplicas: 2
     maxReplicas: 10
     targetCPU: 70
+    targetMemory: 80
+  requestTimeoutMillis: 500
+  concurrencyMaxInFlight: 1000
 
 ruleCheckWorker:
   replicas: 2
-  image: fds/rule-check-worker:latest
+  image:
+    pullPolicy: IfNotPresent
+  http:
+    port: 8081
   resources:
     requests:
       cpu: 250m
@@ -24,25 +43,34 @@ ruleCheckWorker:
       cpu: 1000m
       memory: 1Gi
   hpa:
+    enabled: true
     minReplicas: 2
     maxReplicas: 10
     targetCPU: 70
-
-config:
-  ticketQueueUrl: "https://sqs.ap-southeast-1.amazonaws.com/123456789012/fds-ticket-queue"
-  redisHost: "fds-redis.example.com"
-  sqsEndpoint: "https://sqs.ap-southeast-1.amazonaws.com"
+    targetMemory: 80
+  rules:
+    amountThreshold: 10000.0
+  denylist:
+    refreshIntervalSeconds: 60
 
 aws:
-  region: "ap-southeast-1"
+  region: ap-southeast-1
+  accessKeyId: ""  # or leave empty for IRSA
+  secretAccessKey: ""
+
+sqs:
+  ticketQueueUrl: https://sqs.ap-southeast-1.amazonaws.com/123456789012/fds-ticket-queue
+  endpoint: https://sqs.ap-southeast-1.amazonaws.com
 
 redis:
+  host: fds-redis.example.com
+  port: 6379
+  password: ""
   enabled: true
-  resultChannel: "fds:results"
+  resultChannel: fds:results
   resultTtlSeconds: 300
-  denylistKey: "fds:denylist"
+  denylistKey: fds:denylist
 
-requestTimeoutMillis: 500
-concurrencyMaxInFlight: 1000
-amountThreshold: 10000.0
-denylistRefreshIntervalSeconds: 60
+ingress:
+  enabled: false
+  host: fds.example.com

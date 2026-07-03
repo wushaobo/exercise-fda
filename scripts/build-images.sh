@@ -15,7 +15,7 @@ fi
 echo "=== Building FDS images (tag=$TAG) ==="
 
 for svc in sync-facade rule-check-worker; do
-    image="${REGISTRY}fds-${svc}:${TAG}"
+    image="${REGISTRY}fds/${svc}:${TAG}"
     echo ""
     echo "--- Building $image ---"
     docker build $SECRET_FLAG -t "$image" "$REPO_ROOT/services/$svc"

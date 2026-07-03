@@ -2,7 +2,10 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: fds-config
+  labels:
+    {{- include "fds.labels" . | nindent 4 }}
 data:
-  ticket-queue-url: "{{ .Values.config.ticketQueueUrl }}"
-  redis-host: "{{ .Values.config.redisHost }}"
-  sqs-endpoint: "{{ .Values.config.sqsEndpoint }}"
+  ticket-queue-url: "{{ .Values.sqs.ticketQueueUrl }}"
+  redis-host: "{{ .Values.redis.host }}"
+  sqs-endpoint: "{{ .Values.sqs.endpoint }}"
+  aws-region: "{{ .Values.aws.region }}"
