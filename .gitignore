@@ -30,3 +30,8 @@ docker-compose.override.yml
 
 # Testcontainers
 .testcontainers.properties
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
