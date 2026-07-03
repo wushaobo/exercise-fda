@@ -15,6 +15,15 @@ for service_dir in "$REPO_ROOT"/services/*/; do
     if cd "$service_dir" && gradle test jacocoTestReport; then
         echo "  PASSED: $service_name"
         echo "  Coverage report: services/$service_name/build/reports/jacoco/test/html/index.html"
+
+        html_file="$service_dir/build/reports/jacoco/test/html/index.html"
+        if [ -f "$html_file" ]; then
+            grep -o '<tfoot>.*</tfoot>' "$html_file" \
+                | sed 's|</td>| |g' \
+                | sed 's/<[^>]*>//g' \
+                | tr -d ',' \
+                | awk '{ printf "  Lines: %d/%.0f, Instructions: %s, Branches: %s\n", $13-$12, $13, $5, $9 }'
+        fi
     else
         echo "  FAILED: $service_name"
         EXIT_CODE=1
