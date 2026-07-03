@@ -6,7 +6,9 @@ metadata:
     {{- include "fds.labels" . | nindent 4 }}
     app: sync-facade
 spec:
+  {{- if not .Values.syncFacade.hpa.enabled }}
   replicas: {{ .Values.syncFacade.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       app: sync-facade

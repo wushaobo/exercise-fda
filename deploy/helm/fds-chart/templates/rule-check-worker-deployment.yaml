@@ -6,7 +6,9 @@ metadata:
     {{- include "fds.labels" . | nindent 4 }}
     app: rule-check-worker
 spec:
+  {{- if not .Values.ruleCheckWorker.hpa.enabled }}
   replicas: {{ .Values.ruleCheckWorker.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       app: rule-check-worker
