@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package com.hsbc.fds;
+
+option java_multiple_files = true;
+option java_package = "com.hsbc.fds.proto";
+
+service FraudDetectionService {
+    rpc CheckTransaction (TransactionCheckRequest) returns (TransactionCheckResponse);
+}
+
+message TransactionCheckRequest {
+    string transaction_id = 1;
+    string upstream_trace_id = 2;
+    string payer_account_id = 3;
+    string payee_account_id = 4;
+    double amount = 5;
+    string currency = 6;
+    int64 timestamp = 7;
+}
+
+message TransactionCheckResponse {
+    string transaction_id = 1;
+    FraudVerdict verdict = 2;
+    FraudReason reason = 3;
+    string message = 4;
+}
+
+enum FraudVerdict {
+    CLEAR = 0;
+    SUSPICIOUS = 1;
+    CONFIRMED_FRAUD = 2;
+}
+
+enum FraudReason {
+    NONE = 0;
+    AMOUNT_ABOVE_THRESHOLD = 1;
+    PAYEE_IN_DENYLIST = 2;
+}

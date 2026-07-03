@@ -30,4 +30,9 @@ public class GrpcServerConfig {
                 .build()
                 .start();
     }
+
+    @Bean
+    public org.springframework.boot.ApplicationRunner grpcServerRunner(Server server) {
+        return args -> server.awaitTermination();
+    }
 }

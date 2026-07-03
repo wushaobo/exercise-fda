@@ -47,6 +47,10 @@ dependencies {
     testImplementation 'org.awaitility:awaitility'
 }
 
+bootJar {
+    archiveFileName = 'app.jar'
+}
+
 tasks.named('test') {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
