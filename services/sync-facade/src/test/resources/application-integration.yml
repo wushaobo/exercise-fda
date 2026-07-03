@@ -1,0 +1,11 @@
+spring:
+  autoconfigure:
+    exclude:
+      - io.awspring.cloud.autoconfigure.sqs.SqsAutoConfiguration
+
+fds:
+  redis:
+    enabled: true
+    result-channel: fds:results
+  grpc:
+    enabled: false

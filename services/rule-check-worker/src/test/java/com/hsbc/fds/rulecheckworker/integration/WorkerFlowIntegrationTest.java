@@ -2,6 +2,7 @@ package com.hsbc.fds.rulecheckworker.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
+import com.hsbc.fds.rulecheckworker.redis.DenylistCache;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,9 @@ class WorkerFlowIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private DenylistCache denylistCache;
+
     @Test
     void shouldProcessSqsMessageAndWriteResultToRedis() throws Exception {
         TransactionCheckTask task = new TransactionCheckTask();
@@ -124,5 +128,34 @@ class WorkerFlowIntegrationTest {
         assertThat(resultJson).contains("\"reason\":\"AMOUNT_ABOVE_THRESHOLD\"");
 
         redisTemplate.delete("flow-test-req-2");
+    }
+
+    @Test
+    void shouldFlagPayeeInDenylist() throws Exception {
+        // Seed denylist and refresh cache
+        redisTemplate.opsForValue().set("fds:denylist", "account-blocked-1,account-blocked-2");
+        denylistCache.refresh();
+
+        TransactionCheckTask task = new TransactionCheckTask();
+        task.setRequestId("flow-test-req-3");
+        task.setTransactionId("flow-tx-003");
+        task.setPayerAccountId("payer-1");
+        task.setPayeeAccountId("account-blocked-1");
+        task.setAmount(100.0);
+        task.setCurrency("USD");
+
+        String payload = objectMapper.writeValueAsString(task);
+        sqsTemplate.send(to -> to.queue(ticketQueueUrl).payload(payload));
+
+        await().atMost(Duration.ofSeconds(15))
+                .until(() -> redisTemplate.opsForValue().get("flow-test-req-3") != null);
+
+        String resultJson = redisTemplate.opsForValue().get("flow-test-req-3");
+        assertThat(resultJson).contains("\"verdict\":\"CONFIRMED_FRAUD\"");
+        assertThat(resultJson).contains("\"reason\":\"PAYEE_IN_DENYLIST\"");
+        assertThat(resultJson).contains("account-blocked-1");
+
+        redisTemplate.delete("flow-test-req-3");
+        redisTemplate.delete("fds:denylist");
     }
 }
