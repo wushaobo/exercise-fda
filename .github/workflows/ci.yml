@@ -55,7 +55,7 @@ jobs:
       - name: Build image
         working-directory: services/${{ matrix.service }}
         run: |
-          docker build -t fds/${{ matrix.service }}:${{ github.sha }} .
+          docker build -t fds/${{ matrix.service }}:${{ github.ref_name }}-${{ github.sha }} .
 
       - name: Verify image
         run: docker images --filter "reference=fds/${{ matrix.service }}" --format "{{.Repository}}:{{.Tag}} {{.Size}}"
