@@ -1,0 +1,50 @@
+# Fluent Bit → CloudWatch for FDS
+# helm repo add fluent https://fluent.github.io/helm-charts
+# helm install fluent-bit fluent/fluent-bit -f this-file.yaml
+
+config:
+  service: |
+    [SERVICE]
+        Flush         5
+        Log_Level     info
+        Parsers_File  parsers.conf
+
+  inputs: |
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        Parser            docker
+        DB                /var/log/flb_kube.db
+        Mem_Buf_Limit     10MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+
+  filters: |
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Merge_Log           On
+
+  outputs: |
+    [OUTPUT]
+        Name                  cloudwatch_logs
+        Match                 *
+        region                ap-southeast-1
+        log_group_name        /aws/fluent-bit/fds-uat
+        log_stream_prefix     fds-
+        auto_create_group     true
+
+tolerations:
+  - key: pool
+    value: monitor
+    effect: NoSchedule
+
+nodeSelector:
+  pool: monitor
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi

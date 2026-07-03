@@ -1,0 +1,35 @@
+# kube-prometheus-stack minimal config for FDS
+# helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+# helm install prometheus prometheus-community/kube-prometheus-stack -f this-file.yaml
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+    retention: 7d
+
+grafana:
+  enabled: true
+  adminPassword: admin  # change in production
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  nodeSelector:
+    pool: monitor
+  tolerations:
+    - key: pool
+      value: monitor
+      effect: NoSchedule
+
+nodeExporter:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
+
+alertmanager:
+  enabled: false

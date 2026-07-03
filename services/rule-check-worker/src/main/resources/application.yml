@@ -8,6 +8,16 @@ spring:
     virtual:
       enabled: true
 
+otel:
+  service:
+    name: rule-check-worker
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+      protocol: grpc
+  metrics:
+    exporter: otlp
+
 fds:
   sqs:
     ticket-queue-url: http://localhost:4566/000000000000/fds-ticket-queue

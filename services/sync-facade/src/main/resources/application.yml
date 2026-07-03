@@ -8,6 +8,16 @@ spring:
     virtual:
       enabled: true
 
+otel:
+  service:
+    name: sync-facade
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+      protocol: grpc
+  metrics:
+    exporter: otlp
+
 fds:
   grpc:
     port: 9090
