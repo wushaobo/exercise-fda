@@ -29,7 +29,7 @@ services:
   sync-facade:
     build:
       context: ../services/sync-facade
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "8080:8080"
       - "9090:9090"
@@ -55,7 +55,7 @@ services:
   rule-check-worker:
     build:
       context: ../services/rule-check-worker
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "8081:8081"
     environment:

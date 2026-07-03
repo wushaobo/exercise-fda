@@ -7,4 +7,5 @@ build/libs/*-plain.jar
 .git/
 .gitignore
 Dockerfile
+Dockerfile.dev
 .dockerignore
