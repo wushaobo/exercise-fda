@@ -59,11 +59,12 @@ sleep 6
 
 echo ""
 echo "--- Step 9: Run e2e tests ---"
-kubectl -n "$NAMESPACE" port-forward svc/sync-facade 9090:9090 &
+# Port 19090 avoids the k3d -p 9090:30090 host mapping.
+kubectl -n "$NAMESPACE" port-forward svc/sync-facade 19090:9090 &
 PF_PID=$!
 sleep 3
 cd "$REPO_ROOT/e2e-test"
-gradle e2eClient -q
+gradle -Dgrpc.port=19090 e2eClient -q
 kill $PF_PID 2>/dev/null || true
 
 echo ""
