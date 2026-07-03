@@ -14,14 +14,6 @@ terraform {
       version = "~> 3.0"
     }
   }
-
-  backend "s3" {
-    bucket         = "fds-terraform-state"
-    key            = "terraform.tfstate"
-    region         = "ap-southeast-1"
-    dynamodb_table = "fds-terraform-lock"
-    encrypt        = true
-  }
 }
 
 provider "aws" {
