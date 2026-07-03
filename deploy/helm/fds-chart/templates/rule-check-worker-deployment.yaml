@@ -74,6 +74,16 @@ spec:
                 configMapKeyRef:
                   name: fds-config
                   key: sqs-endpoint
+            {{- if .Values.otel.enabled }}
+            - name: OTEL_SERVICE_NAME
+              value: rule-check-worker
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.otel.collectorEndpoint | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            {{- end }}
           resources:
             {{- toYaml .Values.ruleCheckWorker.resources | nindent 12 }}
           livenessProbe:

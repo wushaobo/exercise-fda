@@ -1,8 +1,36 @@
+{{- if .Values.otel.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  labels:
+    {{- include "fds.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+    processors:
+      batch:
+        timeout: 10s
+    exporters:
+      debug:
+        verbosity: detailed
+    service:
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [debug]
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: otel-collector
   labels:
+    {{- include "fds.labels" . | nindent 4 }}
     app: otel-collector
 spec:
   replicas: 1
@@ -14,21 +42,13 @@ spec:
       labels:
         app: otel-collector
     spec:
-      nodeSelector:
-        pool: monitor
-      tolerations:
-        - key: pool
-          value: monitor
-          effect: NoSchedule
       containers:
         - name: otel-collector
-          image: otel/opentelemetry-collector-contrib:0.155.0
+          image: otel/opentelemetry-collector:0.155.0
           args: ["--config=/etc/otel/config.yaml"]
           ports:
             - containerPort: 4317
               name: otlp-grpc
-            - containerPort: 8889
-              name: metrics
           volumeMounts:
             - name: config
               mountPath: /etc/otel
@@ -46,6 +66,7 @@ kind: Service
 metadata:
   name: otel-collector
   labels:
+    {{- include "fds.labels" . | nindent 4 }}
     app: otel-collector
 spec:
   selector:
@@ -54,6 +75,4 @@ spec:
     - port: 4317
       targetPort: 4317
       name: otlp-grpc
-    - port: 8889
-      targetPort: 8889
-      name: metrics
+{{- end }}

@@ -29,11 +29,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-json'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
-    // OpenTelemetry
-    implementation platform('io.opentelemetry:opentelemetry-bom:1.44.0')
-    implementation 'io.opentelemetry:opentelemetry-api'
-    implementation 'io.opentelemetry:opentelemetry-sdk'
-    implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+    // OpenTelemetry — Spring Boot starter auto-wires SDK + OTLP gRPC exporter + micrometer bridge.
+    // Release BOM 2.15.0 aligns opentelemetry-bom to 1.49.0 (matches instrumentation 2.15.0).
+    implementation platform('io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.15.0')
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter'
 
     // AWS SQS
     implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}")

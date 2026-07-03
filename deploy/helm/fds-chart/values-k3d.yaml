@@ -31,5 +31,9 @@ redis:
   port: 6379
   password: ""
 
+otel:
+  enabled: true
+  collectorEndpoint: http://otel-collector:4317
+
 ingress:
   enabled: false

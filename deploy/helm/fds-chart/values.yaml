@@ -71,6 +71,10 @@ redis:
   resultTtlSeconds: 300
   denylistKey: fds:denylist
 
+otel:
+  enabled: true
+  collectorEndpoint: http://otel-collector:4317
+
 ingress:
   enabled: false
   host: fds.example.com

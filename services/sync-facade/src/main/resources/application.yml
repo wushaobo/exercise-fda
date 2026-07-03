@@ -17,6 +17,10 @@ otel:
       protocol: grpc
   metrics:
     exporter: otlp
+  logs:
+    exporter: none
+  traces:
+    exporter: none
 
 fds:
   grpc:

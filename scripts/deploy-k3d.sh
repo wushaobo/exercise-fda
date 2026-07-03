@@ -67,4 +67,8 @@ gradle e2eClient -q
 kill $PF_PID 2>/dev/null || true
 
 echo ""
+echo "--- Step 10: Verify OTel metrics ---"
+bash "$REPO_ROOT/scripts/verify-otel-metrics.sh"
+
+echo ""
 echo "=== FDS k3d Deployment Complete ==="
