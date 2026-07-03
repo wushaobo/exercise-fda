@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rule-check-worker
+  labels:
+    app: rule-check-worker
+spec:
+  replicas: {{ .Values.ruleCheckWorker.replicas }}
+  selector:
+    matchLabels:
+      app: rule-check-worker
+  template:
+    metadata:
+      labels:
+        app: rule-check-worker
+    spec:
+      containers:
+        - name: rule-check-worker
+          image: {{ .Values.ruleCheckWorker.image }}
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+            - name: SERVER_PORT
+              value: "8081"
+            - name: FDS_SQS_TICKET_QUEUE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: ticket-queue-url
+            - name: FDS_REDIS_ENABLED
+              value: "{{ .Values.redis.enabled }}"
+            - name: FDS_REDIS_RESULT_CHANNEL
+              value: "{{ .Values.redis.resultChannel }}"
+            - name: FDS_REDIS_RESULT_TTL_SECONDS
+              value: "{{ .Values.redis.resultTtlSeconds }}"
+            - name: FDS_REDIS_DENYLIST_KEY
+              value: "{{ .Values.redis.denylistKey }}"
+            - name: FDS_DENYLIST_REFRESH_INTERVAL_SECONDS
+              value: "{{ .Values.denylistRefreshIntervalSeconds }}"
+            - name: FDS_RULES_AMOUNT_THRESHOLD
+              value: "{{ .Values.amountThreshold }}"
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: redis-host
+            - name: SPRING_CLOUD_AWS_REGION_STATIC
+              value: "{{ .Values.aws.region }}"
+            - name: SPRING_CLOUD_AWS_SQS_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: sqs-endpoint
+          resources:
+            {{- toYaml .Values.ruleCheckWorker.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rule-check-worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rule-check-worker
+  minReplicas: {{ .Values.ruleCheckWorker.hpa.minReplicas }}
+  maxReplicas: {{ .Values.ruleCheckWorker.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ruleCheckWorker.hpa.targetCPU }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

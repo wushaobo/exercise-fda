@@ -1,0 +1,48 @@
+syncFacade:
+  replicas: 2
+  image: fds/sync-facade:latest
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  hpa:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPU: 70
+
+ruleCheckWorker:
+  replicas: 2
+  image: fds/rule-check-worker:latest
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  hpa:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPU: 70
+
+config:
+  ticketQueueUrl: "https://sqs.ap-southeast-1.amazonaws.com/123456789012/fds-ticket-queue"
+  redisHost: "fds-redis.example.com"
+  sqsEndpoint: "https://sqs.ap-southeast-1.amazonaws.com"
+
+aws:
+  region: "ap-southeast-1"
+
+redis:
+  enabled: true
+  resultChannel: "fds:results"
+  resultTtlSeconds: 300
+  denylistKey: "fds:denylist"
+
+requestTimeoutMillis: 500
+concurrencyMaxInFlight: 1000
+amountThreshold: 10000.0
+denylistRefreshIntervalSeconds: 60

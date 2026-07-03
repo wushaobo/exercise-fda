@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fds-config
+data:
+  ticket-queue-url: "{{ .Values.config.ticketQueueUrl }}"
+  redis-host: "{{ .Values.config.redisHost }}"
+  sqs-endpoint: "{{ .Values.config.sqsEndpoint }}"

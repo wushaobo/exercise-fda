@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sync-facade
+  labels:
+    app: sync-facade
+spec:
+  replicas: {{ .Values.syncFacade.replicas }}
+  selector:
+    matchLabels:
+      app: sync-facade
+  template:
+    metadata:
+      labels:
+        app: sync-facade
+    spec:
+      containers:
+        - name: sync-facade
+          image: {{ .Values.syncFacade.image }}
+          ports:
+            - containerPort: 8080
+              name: http
+            - containerPort: 9090
+              name: grpc
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+            - name: FDS_GRPC_PORT
+              value: "9090"
+            - name: FDS_SQS_TICKET_QUEUE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: ticket-queue-url
+            - name: FDS_REDIS_ENABLED
+              value: "{{ .Values.redis.enabled }}"
+            - name: FDS_REDIS_RESULT_CHANNEL
+              value: "{{ .Values.redis.resultChannel }}"
+            - name: FDS_REQUEST_TIMEOUT_MILLIS
+              value: "{{ .Values.requestTimeoutMillis }}"
+            - name: FDS_CONCURRENCY_MAX_IN_FLIGHT
+              value: "{{ .Values.concurrencyMaxInFlight }}"
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: redis-host
+            - name: SPRING_CLOUD_AWS_REGION_STATIC
+              value: "{{ .Values.aws.region }}"
+            - name: SPRING_CLOUD_AWS_SQS_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: fds-config
+                  key: sqs-endpoint
+          resources:
+            {{- toYaml .Values.syncFacade.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sync-facade
+  labels:
+    app: sync-facade
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9090
+      targetPort: 9090
+      name: grpc
+  selector:
+    app: sync-facade
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sync-facade
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sync-facade
+  minReplicas: {{ .Values.syncFacade.hpa.minReplicas }}
+  maxReplicas: {{ .Values.syncFacade.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.syncFacade.hpa.targetCPU }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
