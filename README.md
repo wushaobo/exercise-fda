@@ -71,5 +71,17 @@ flowchart TB
 - Denylist payee → CONFIRMED_FRAUD
 
 ### Load Test
+Test using `ghz` from a dedicate EC2 instance in the VPC. 
+
+| Metric  | Value    |
+| ------- | -------- |
+| Count   | 85032    |
+| Total   | 180.00s  |
+| Fastest | 5.17ms   |
+| P10     | 103.83ms |
+| P95     | 778.34ms |
+| P99     | 1.14s    |
+| Slowest | 8.66s    |
+| RPS     | 472.40   |
 
 ### Resilience Test
