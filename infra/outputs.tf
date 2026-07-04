@@ -66,3 +66,12 @@ output "redis_auth_token" {
 output "cloudwatch_log_group" {
   value = aws_cloudwatch_log_group.fds.name
 }
+
+output "ghz_runner_public_ip" {
+  value = aws_instance.ghz_runner.public_ip
+}
+
+output "ghz_runner_private_key" {
+  value     = tls_private_key.ghz_runner.private_key_openssh
+  sensitive = true
+}

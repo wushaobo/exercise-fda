@@ -9,8 +9,10 @@ syncFacade:
     pullPolicy: Always
   hpa:
     enabled: true
-    minReplicas: 2
-    maxReplicas: 10
+    minReplicas: 2     # keep 2 for HA; not lowered
+    maxReplicas: 4     # perf test: lowered from 10 (MVP)
+    targetCPU: 40      # perf test: lowered from 70 to trigger scale at modest traffic
+    targetMemory: 70   # perf test: lowered from 80
 
 ruleCheckWorker:
   replicas: 2

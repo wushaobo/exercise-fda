@@ -1,0 +1,21 @@
+# Internal NLB exposing sync-facade gRPC port to the ghz runner EC2 in the
+# same VPC. Independent of the ArgoCD-managed Helm chart so it can be applied
+# and deleted per perf run. Deleted in run.sh cleanup (NLB costs money).
+apiVersion: v1
+kind: Service
+metadata:
+  name: sync-facade-nlb
+  namespace: fds
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+    service.beta.kubernetes.io/aws-load-balancer-name: sync-facade-nlb-uat
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 9090
+      targetPort: 9090
+      protocol: TCP
+      name: grpc
+  selector:
+    app: sync-facade
