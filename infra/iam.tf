@@ -167,7 +167,7 @@ resource "aws_iam_role" "fds_github_actions" {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
         }
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:wushaobo/exercise-fda:ref:dev"
+          "token.actions.githubusercontent.com:sub" = "repo:wushaobo/exercise-fda:*"
         }
       }
     }]
