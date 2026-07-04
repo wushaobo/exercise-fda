@@ -20,17 +20,17 @@ flowchart TB
 
 ### Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Java 21 (Temurin) with Virtual Threads |
-| Framework | Spring Boot 3.5.16 |
-| gRPC | grpc-java 1.76.3 |
-| Message Queue | AWS SQS (LocalStack for dev/CI) |
+| Layer           | Technology                         |
+| --------------- | ---------------------------------- |
+| Language        | Java 21.0.11 (Temurin)             |
+| Framework       | Spring Boot 3.5.16                 |
+| gRPC            | grpc-java 1.76.3                   |
+| Message Queue   | AWS SQS (LocalStack for dev/CI)    |
 | Cache + Pub/Sub | AWS ElastiCache (Redis for dev/CI) |
-| Logging | Fluent Bit → CloudWatch |
-| Infra | Terraform |
-| CI/CD | GitHub Actions + ArgoCD |
-| Deployment | Kubernetes (EKS), Helm|
+| Observability   | AWS CloudWatch                     |
+| Infrastructure  | Terraform                          |
+| CI/CD           | GitHub Actions + ArgoCD            |
+| Deployment      | Kubernetes (EKS), Helm             |
 
 
 ### Scripts Explanation
@@ -51,14 +51,14 @@ flowchart TB
 
 ### K8s Cluster + Observability
 
-| Layer | Tools |
-|-------|-------|
-| Cluster | k3d (local), EKS (prod) |
-| Deployment | Helm |
-| GitOps | ArgoCD |
-| Logging | Fluent Bit → CloudWatch |
-| Metrics | OTel Collector → Prometheus → CloudWatch |
-| Dashboards | CloudWatch |
+| Layer      | Tools                                    |
+| ---------- | ---------------------------------------- |
+| Cluster    | k3d (local), EKS (prod)                  |
+| Deployment | Helm                                     |
+| GitOps     | ArgoCD                                   |
+| Logging    | Fluent Bit → CloudWatch                  |
+| Metrics    | OTel Collector → Prometheus → CloudWatch |
+| Dashboards | CloudWatch                               |
 
 ## Testing
 ### Uint/Integration Test Coverage
