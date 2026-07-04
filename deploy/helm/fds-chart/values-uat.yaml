@@ -1,7 +1,7 @@
 global:
   image:
     registry: 498307943823.dkr.ecr.ap-southeast-1.amazonaws.com
-    tag: dev-ec727f316f182fdaaa1c169cd18679a8562aa1d2
+    tag: dev-dcfbdf21bb25165ead91df369e0984636b33081c
 
 syncFacade:
   replicas: 2
