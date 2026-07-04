@@ -105,7 +105,7 @@ jobs:
     name: Deploy to ECR
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
-    needs: [test, e2e]
+    needs: [test, build-images, e2e]
     permissions:
       id-token: write   # OIDC: assume GitHub Actions IRSA role
       contents: write   # commit-back image tag to values-uat.yaml
