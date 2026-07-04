@@ -54,6 +54,38 @@ resource "aws_cloudwatch_dashboard" "fds" {
         type = "metric"
         x    = 0, y = 6, width = 12, height = 6
         properties = {
+          title   = "Pod Count per Service (OTel k8s_cluster)"
+          region  = var.region
+          view    = "timeSeries"
+          stacked = false
+          metrics = [
+            ["FDS", "k8s.deployment.available", "k8s.deployment.name", "sync-facade", "k8s.namespace.name", "fds"],
+            [".",   "k8s.deployment.desired",   "k8s.deployment.name", "sync-facade", "k8s.namespace.name", "fds"],
+            [".",   "k8s.deployment.available", "k8s.deployment.name", "rule-check-worker", "k8s.namespace.name", "fds"],
+            [".",   "k8s.deployment.desired",   "k8s.deployment.name", "rule-check-worker", "k8s.namespace.name", "fds"]
+          ]
+        }
+      },
+      {
+        type = "metric"
+        x    = 12, y = 6, width = 12, height = 6
+        properties = {
+          title   = "HPA Replicas — sync-facade (OTel k8s_cluster)"
+          region  = var.region
+          view    = "timeSeries"
+          stacked = false
+          metrics = [
+            ["FDS", "k8s.hpa.current_replicas", "k8s.hpa.name", "sync-facade", "k8s.namespace.name", "fds"],
+            [".",   "k8s.hpa.desired_replicas", "k8s.hpa.name", "sync-facade", "k8s.namespace.name", "fds"],
+            [".",   "k8s.hpa.min_replicas",     "k8s.hpa.name", "sync-facade", "k8s.namespace.name", "fds"],
+            [".",   "k8s.hpa.max_replicas",     "k8s.hpa.name", "sync-facade", "k8s.namespace.name", "fds"]
+          ]
+        }
+      },
+      {
+        type = "metric"
+        x    = 0, y = 12, width = 12, height = 6
+        properties = {
           title   = "SQS Ticket Queue — Received vs Visible"
           region  = var.region
           view    = "timeSeries"
@@ -66,14 +98,17 @@ resource "aws_cloudwatch_dashboard" "fds" {
       },
       {
         type = "metric"
-        x    = 12, y = 6, width = 12, height = 6
+        x    = 12, y = 12, width = 12, height = 6
         properties = {
-          title   = "EKS Node CPUUtilization (isolation check: test-pool spikes, fds-pool unaffected)"
+          title   = "EKS Node CPUUtilization by ASG (fds-pool vs monitor-pool)"
           region  = var.region
           view    = "timeSeries"
           stacked = false
           metrics = [
-            ["AWS/EC2", "CPUUtilization"]
+            [{
+              expression = "SEARCH('{AWS/EC2,AutoScalingGroupName} CPUUtilization', 'Average', 300)"
+              label      = "CPUUtilization"
+            }]
           ]
         }
       }
