@@ -6,6 +6,32 @@ metadata:
   labels:
     {{- include "fds.labels" . | nindent 4 }}
 data:
+  {{- if eq .Values.otel.exporter "awsemf" }}
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+    processors:
+      batch:
+        timeout: 10s
+    exporters:
+      awsemf:
+        region: {{ .Values.aws.region }}
+        log_group_name: {{ .Values.otel.logGroup | quote }}
+        namespace: FDS
+        dimension_rollup_option: NoDimensionRollup
+        metric_declarations:
+          - dimensions: [[service]]
+            metric_name_selectors: [".*"]
+    service:
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [awsemf]
+  {{- else }}
   config.yaml: |
     receivers:
       otlp:
@@ -24,6 +50,7 @@ data:
           receivers: [otlp]
           processors: [batch]
           exporters: [debug]
+  {{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -42,9 +69,19 @@ spec:
       labels:
         app: otel-collector
     spec:
+      serviceAccountName: otel-collector
+      tolerations:
+        - key: pool
+          operator: Equal
+          value: monitor
+          effect: NoSchedule
       containers:
         - name: otel-collector
+          {{- if eq .Values.otel.exporter "awsemf" }}
+          image: otel/opentelemetry-collector-contrib:0.155.0
+          {{- else }}
           image: otel/opentelemetry-collector:0.155.0
+          {{- end }}
           args: ["--config=/etc/otel/config.yaml"]
           ports:
             - containerPort: 4317

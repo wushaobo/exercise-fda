@@ -33,7 +33,19 @@ redis:
 
 otel:
   enabled: true
+  exporter: debug  # k3d → stdout debug
   collectorEndpoint: http://otel-collector:4317
+
+secret:
+  create: true
+
+serviceAccounts:
+  sync-facade:
+    roleArn: ""
+  rule-check-worker:
+    roleArn: ""
+  otel-collector:
+    roleArn: ""
 
 ingress:
   enabled: false

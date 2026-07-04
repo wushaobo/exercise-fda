@@ -55,7 +55,7 @@ ruleCheckWorker:
 
 aws:
   region: ap-southeast-1
-  accessKeyId: ""  # or leave empty for IRSA
+  accessKeyId: ""  # leave empty → IRSA (DefaultCredentialsChain)
   secretAccessKey: ""
 
 sqs:
@@ -73,7 +73,20 @@ redis:
 
 otel:
   enabled: true
+  exporter: debug  # debug | awsemf
+  logGroup: /aws/otel/fds-placeholder
   collectorEndpoint: http://otel-collector:4317
+
+secret:
+  create: true  # k3d/local → true; EKS Terraform-managed → false
+
+serviceAccounts:
+  sync-facade:
+    roleArn: ""  # IRSA role ARN, set in env-specific values
+  rule-check-worker:
+    roleArn: ""
+  otel-collector:
+    roleArn: ""
 
 ingress:
   enabled: false

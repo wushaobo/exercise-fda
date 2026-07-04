@@ -17,6 +17,12 @@ spec:
       labels:
         app: sync-facade
     spec:
+      serviceAccountName: sync-facade
+      tolerations:
+        - key: pool
+          operator: Equal
+          value: fds
+          effect: NoSchedule
       containers:
         - name: sync-facade
           image: {{ include "fds.syncFacade.image" . }}
@@ -61,6 +67,7 @@ spec:
                 configMapKeyRef:
                   name: fds-config
                   key: aws-region
+            {{- if .Values.aws.accessKeyId }}
             - name: SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
@@ -71,6 +78,7 @@ spec:
                 secretKeyRef:
                   name: fds-secret
                   key: aws-secret-access-key
+            {{- end }}
             - name: SPRING_CLOUD_AWS_SQS_ENDPOINT
               valueFrom:
                 configMapKeyRef:

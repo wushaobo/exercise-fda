@@ -1,12 +1,14 @@
 global:
   image:
-    tag: latest  # CI overrides this
+    registry: 498307943823.dkr.ecr.ap-southeast-1.amazonaws.com
+    tag: latest  # CI overrides with dev-${SHA}
 
 syncFacade:
   replicas: 2
   image:
     pullPolicy: Always
   hpa:
+    enabled: true
     minReplicas: 2
     maxReplicas: 10
 
@@ -15,11 +17,45 @@ ruleCheckWorker:
   image:
     pullPolicy: Always
   hpa:
+    enabled: true
     minReplicas: 2
     maxReplicas: 10
 
 aws:
   region: ap-southeast-1
+  # accessKeyId empty → IRSA via DefaultCredentialsChain
+  accessKeyId: ""
+  secretAccessKey: ""
+
+sqs:
+  ticketQueueUrl: https://sqs.ap-southeast-1.amazonaws.com/498307943823/fds-ticket-queue-uat
+  endpoint: https://sqs.ap-southeast-1.amazonaws.com
+
+redis:
+  host: fds-redis-uat-yxfpcw.serverless.apse1.cache.amazonaws.com
+  port: 6379
+  password: ""  # in k8s secret (Terraform-managed), not here
+  enabled: true
+  resultChannel: fds:results
+  resultTtlSeconds: 300
+  denylistKey: fds:denylist
+
+otel:
+  enabled: true
+  exporter: awsemf                     # awsemf → EMF → CloudWatch Logs → metrics
+  logGroup: /aws/otel/fds-uat
+  collectorEndpoint: http://otel-collector:4317
+
+secret:
+  create: false  # managed by Terraform (fds/fds-secret)
+
+serviceAccounts:
+  sync-facade:
+    roleArn: arn:aws:iam::498307943823:role/fds-pod-uat
+  rule-check-worker:
+    roleArn: arn:aws:iam::498307943823:role/fds-pod-uat
+  otel-collector:
+    roleArn: arn:aws:iam::498307943823:role/fds-otel-collector-uat
 
 ingress:
   enabled: true
