@@ -13,6 +13,9 @@ data:
         protocols:
           grpc:
             endpoint: 0.0.0.0:4317
+      k8s_cluster:
+        collection_interval: 30s
+        auth_type: serviceAccount
     processors:
       batch:
         timeout: 10s
@@ -27,10 +30,14 @@ data:
         metric_declarations:
           - dimensions: [[service.name]]
             metric_name_selectors: [".*"]
+          - dimensions: [[k8s.deployment.name, k8s.namespace.name]]
+            metric_name_selectors: ["k8s\\.deployment\\..*"]
+          - dimensions: [[k8s.hpa.name, k8s.namespace.name]]
+            metric_name_selectors: ["k8s\\.hpa\\..*"]
     service:
       pipelines:
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, k8s_cluster]
           processors: [batch]
           exporters: [awsemf]
   {{- else }}
@@ -40,6 +47,9 @@ data:
         protocols:
           grpc:
             endpoint: 0.0.0.0:4317
+      k8s_cluster:
+        collection_interval: 30s
+        auth_type: serviceAccount
     processors:
       batch:
         timeout: 10s
@@ -49,7 +59,7 @@ data:
     service:
       pipelines:
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, k8s_cluster]
           processors: [batch]
           exporters: [debug]
   {{- end }}
