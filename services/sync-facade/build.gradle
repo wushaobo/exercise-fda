@@ -46,6 +46,10 @@ dependencies {
     // AWS SQS
     implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:${springCloudAwsVersion}")
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-sqs'
+    // AWS SDK sts module — required on classpath for IRSA (WebIdentityTokenCredentialsProvider
+    // calls AssumeRoleWithWebIdentity via StsClient; without it, EKS IRSA credentials fail to load
+    // and SQS receive/send errors with "the 'sts' service module must be on the class path").
+    implementation 'software.amazon.awssdk:sts'
 
     // Redis (Pub/Sub + result cache + denylist)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
