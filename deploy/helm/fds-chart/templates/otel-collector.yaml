@@ -21,9 +21,10 @@ data:
         region: {{ .Values.aws.region }}
         log_group_name: {{ .Values.otel.logGroup | quote }}
         namespace: FDS
-        dimension_rollup_option: NoDimensionRollup
+        resource_to_telemetry_conversion:
+          enabled: true
         metric_declarations:
-          - dimensions: [[service]]
+          - dimensions: [[], [service.name]]
             metric_name_selectors: [".*"]
     service:
       pipelines:
