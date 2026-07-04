@@ -22,7 +22,8 @@ echo ""
 echo "--- Step 2: Preload k3d system images ---"
 docker pull rancher/mirrored-pause:3.6 -q 2>/dev/null || true
 docker pull rancher/mirrored-coredns-coredns:1.14.3 -q 2>/dev/null || true
-k3d image import rancher/mirrored-pause:3.6 rancher/mirrored-coredns-coredns:1.14.3 -c "$CLUSTER"
+docker pull cr.fluentbit.io/fluent/fluent-bit:5.0.8 || true
+k3d image import rancher/mirrored-pause:3.6 rancher/mirrored-coredns-coredns:1.14.3 cr.fluentbit.io/fluent/fluent-bit:5.0.8 -c "$CLUSTER"
 kubectl -n kube-system wait --for=condition=available deployment/coredns --timeout=60s 2>/dev/null || true
 
 echo ""
@@ -48,17 +49,26 @@ helm upgrade --install fds deploy/helm/fds-chart \
     -n "$NAMESPACE" --create-namespace
 
 echo ""
-echo "--- Step 7: Wait for pods ---"
+echo "--- Step 7: Install Fluent Bit ---"
+helm repo add fluent https://fluent.github.io/helm-charts 2>/dev/null || true
+helm upgrade --install fluent-bit fluent/fluent-bit \
+    -f deploy/monitoring/fluent-bit-values-k3d.yaml \
+    -n "$NAMESPACE" --create-namespace
+sleep 5
+kubectl -n "$NAMESPACE" wait --for=condition=available daemonset/fluent-bit --timeout=120s
+
+echo ""
+echo "--- Step 8: Wait for pods ---"
 kubectl -n "$NAMESPACE" wait --for=condition=available deployment/sync-facade --timeout=120s
 kubectl -n "$NAMESPACE" wait --for=condition=available deployment/rule-check-worker --timeout=120s
 
 echo ""
-echo "--- Step 8: Seed denylist ---"
+echo "--- Step 9: Seed denylist ---"
 docker exec docker-redis-1 redis-cli SET fds:denylist "account-blocked-1" >/dev/null
 sleep 6
 
 echo ""
-echo "--- Step 9: Run e2e tests ---"
+echo "--- Step 10: Run e2e tests ---"
 # Port 19090 avoids the k3d -p 9090:30090 host mapping.
 kubectl -n "$NAMESPACE" port-forward svc/sync-facade 19090:9090 &
 PF_PID=$!
@@ -68,7 +78,7 @@ gradle -Dgrpc.port=19090 e2eClient -q
 kill $PF_PID 2>/dev/null || true
 
 echo ""
-echo "--- Step 10: Verify OTel metrics ---"
+echo "--- Step 11: Verify OTel metrics ---"
 bash "$REPO_ROOT/scripts/verify-otel-metrics.sh"
 
 echo ""

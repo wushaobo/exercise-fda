@@ -1,6 +1,9 @@
-# Fluent Bit → CloudWatch for FDS
+# Fluent Bit → CloudWatch for FDS UAT
 # helm repo add fluent https://fluent.github.io/helm-charts
 # helm install fluent-bit fluent/fluent-bit -f this-file.yaml
+#
+# IRSA: uncomment the serviceAccount section below and fill in the IAM role ARN
+# once fds-fluent-bit IAM role is created in Terraform (TODO: infra/iam.tf).
 
 config:
   service: |
@@ -34,7 +37,12 @@ config:
         region                ap-southeast-1
         log_group_name        /aws/fluent-bit/fds-uat
         log_stream_prefix     fds-
-        auto_create_group     true
+# TODO: IRSA — create IAM role in infra/iam.tf with logs:PutLogEvents, logs:CreateLogStream,
+# logs:DescribeLogGroups on /aws/fluent-bit/fds-uat, then uncomment:
+# serviceAccount:
+#   create: true
+#   annotations:
+#     eks.amazonaws.com/role-arn: arn:aws:iam::<account>:role/fds-fluent-bit-uat
 
 tolerations:
   - key: pool
