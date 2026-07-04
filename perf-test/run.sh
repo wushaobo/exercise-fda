@@ -29,6 +29,8 @@ N="${N:-1000}"
 # ghz binary path on the EC2 (user installs manually). Override if not on PATH:
 #   GHZ_BIN=~/ghz ./perf-test/run.sh
 GHZ_BIN="${GHZ_BIN:-ghz}"
+CONNECTIONS="${CONNECTIONS:-4}"
+SKIPFIRST="${SKIPFIRST:-10}"   # warmup requests excluded from stats; set 0 for smoke
 RESULTS_DIR="$SCRIPT_DIR/results"
 TS="$(date +%Y%m%d-%H%M%S)"
 HPA_LOG="$RESULTS_DIR/hpa-$TS.log"
@@ -56,7 +58,7 @@ echo "  EC2: $EC2_IP"
 cleanup() {
   echo ""
   echo "--- Cleanup ---"
-  kill "$HPA_PID" 2>/dev/null || true
+  kill "${HPA_PID:-}" 2>/dev/null || true
   kubectl -n "$NS" delete -f "$SCRIPT_DIR/nlb-service.yaml" --ignore-not-found >/dev/null 2>&1 || true
   kubectl -n "$NS" delete pod redis-seed --ignore-not-found >/dev/null 2>&1 || true
   rm -f "$KEY_FILE"
@@ -68,14 +70,20 @@ echo "--- Generating 90/9/1 payload array ($N) ---"
 python3 "$SCRIPT_DIR/gen-payload.py" "$N" > "$RESULTS_DIR/payload.json"
 
 # --- 2. seed denylist (fraud path) ---
-echo "--- Seeding Redis denylist (account-blocked-1) ---"
+# The temp redis:alpine pod runs on an EKS node (private subnet) which the
+# ElastiCache SG already allows in; -h points at the cluster Elasticache, so the
+# pod is just a VPC-internal redis-cli jump-box (local Mac is outside the VPC).
+# DenylistCache parses the value with raw.split(","), so comma-separated string
+# matches WorkerFlowIntegrationTest's seed format.
+echo "--- Seeding Elasticache denylist (account-blocked-1,2) ---"
 REDIS_HOST="$(terraform -chdir="$INFRA_DIR" output -raw redis_endpoint)"
 REDIS_PASS="$(kubectl -n "$NS" get secret fds-secret -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d 2>/dev/null || true)"
 if [ -z "$REDIS_PASS" ]; then
   echo "  WARN: could not read redis password from fds-secret; fraud path may not trigger"
 fi
 kubectl -n "$NS" run redis-seed --rm -i --restart=Never --image=redis:alpine -- \
-  redis-cli --tls --user default -a "$REDIS_PASS" -h "$REDIS_HOST" SET fds:denylist account-blocked-1 >/dev/null 2>&1 || \
+  redis-cli --tls --user default -a "$REDIS_PASS" -h "$REDIS_HOST" \
+  SET fds:denylist "account-blocked-1,account-blocked-2" >/dev/null 2>&1 || \
   echo "  WARN: denylist seed failed (continuing)"
 echo "  waiting 65s for rule-check-worker DenylistCache refresh..."
 sleep 65
@@ -92,6 +100,12 @@ for i in $(seq 1 40); do
 done
 [ -z "$NLB_DNS" ] && { echo "  NLB DNS not ready, aborting"; exit 1; }
 echo "  NLB: $NLB_DNS:9090"
+echo "  waiting for NLB DNS to resolve on EC2 (flush cache each try to dodge negative TTL)..."
+for i in $(seq 1 60); do
+  $SSH "resolvectl flush-caches 2>/dev/null || systemd-resolve --flush-caches 2>/dev/null; getent hosts $NLB_DNS" >/dev/null 2>&1 && { echo "  DNS resolved on EC2 (after $((i*5))s)"; break; }
+  sleep 5
+done
+$SSH "getent hosts $NLB_DNS" >/dev/null 2>&1 || { echo "  NLB DNS still not resolving on EC2 after 300s, aborting"; exit 1; }
 
 # --- 4. HPA watch (background, own PID) ---
 echo "--- HPA watch → $HPA_LOG ---"
@@ -112,6 +126,8 @@ $SCP "$RESULTS_DIR/payload.json" "$SCRIPT_DIR/protos/fraud_detection.proto" "ec2
 
 # --- 7. run ghz ---
 echo "--- ghz: c=$CONCURRENCY for $DURATION against $NLB_DNS:9090 ---"
+# ghz rejects connections > concurrency; clamp to min(concurrency, connections)
+CONNS=$(( CONCURRENCY < CONNECTIONS ? CONCURRENCY : CONNECTIONS ))
 $SSH "$GHZ_BIN \
   --proto=$REMOTE_DIR/fraud_detection.proto \
   --call=com.hsbc.fds.FraudDetectionService/CheckTransaction \
@@ -120,9 +136,9 @@ $SSH "$GHZ_BIN \
   --concurrency=$CONCURRENCY \
   --duration=$DURATION \
   --timeout=10s \
-  --skipFirst=10 \
+  --skipFirst=$SKIPFIRST \
   --count-errors \
-  --connections=4 \
+  --connections=$CONNS \
   --output=$REMOTE_DIR/report.html \
   --format=html \
   $NLB_DNS:9090" 2>&1 | tee "$RESULTS_DIR/ghz-stdout-$TS.log"
