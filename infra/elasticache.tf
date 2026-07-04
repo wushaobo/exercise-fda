@@ -22,6 +22,26 @@ resource "random_password" "redis_auth" {
   special = false
 }
 
+locals {
+  # Resolve the final Redis AUTH token: explicit var wins, else the generated one.
+  redis_auth_token = var.redis_auth_token != "" ? var.redis_auth_token : random_password.redis_auth[0].result
+}
+
+# ElastiCache Serverless enforces TLS in transit; RBAC user group adds AUTH credential.
+resource "aws_elasticache_user" "fds" {
+  user_id       = "fds-${var.env}"
+  user_name     = "default"
+  engine        = "redis"
+  passwords     = [local.redis_auth_token]
+  access_string = "on ~* +@all"
+}
+
+resource "aws_elasticache_user_group" "fds" {
+  user_group_id = "fds-${var.env}"
+  engine        = "redis"
+  user_ids      = [aws_elasticache_user.fds.user_id]
+}
+
 resource "aws_elasticache_serverless_cache" "fds" {
   engine = "redis"
   name   = "fds-redis-${var.env}"
@@ -44,4 +64,6 @@ resource "aws_elasticache_serverless_cache" "fds" {
   security_group_ids       = [aws_security_group.redis.id]
   snapshot_retention_limit = 7
   subnet_ids               = aws_subnet.private[*].id
+
+  user_group_id = aws_elasticache_user_group.fds.user_group_id
 }

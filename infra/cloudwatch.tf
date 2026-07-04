@@ -9,3 +9,9 @@ resource "aws_cloudwatch_log_group" "fluent_bit" {
   retention_in_days = 30
   tags              = { Name = "fds-fluent-bit-${var.env}" }
 }
+
+resource "aws_cloudwatch_log_group" "otel" {
+  name              = "/aws/otel/fds-${var.env}"
+  retention_in_days = 30
+  tags              = { Name = "fds-otel-${var.env}" }
+}

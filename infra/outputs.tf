@@ -46,6 +46,23 @@ output "pod_role_arn" {
   value = aws_iam_role.fds_pod.arn
 }
 
+output "fluent_bit_role_arn" {
+  value = aws_iam_role.fds_fluent_bit.arn
+}
+
+output "otel_collector_role_arn" {
+  value = aws_iam_role.fds_otel_collector.arn
+}
+
+output "github_actions_role_arn" {
+  value = aws_iam_role.fds_github_actions.arn
+}
+
+output "redis_auth_token" {
+  value     = local.redis_auth_token
+  sensitive = true
+}
+
 output "cloudwatch_log_group" {
   value = aws_cloudwatch_log_group.fds.name
 }
