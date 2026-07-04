@@ -70,11 +70,6 @@ resource "aws_eks_node_group" "fds_pool" {
   }
 
   labels = { pool = "fds" }
-  taint {
-    key    = "pool"
-    value  = "fds"
-    effect = "NO_SCHEDULE"
-  }
 
   depends_on = [aws_iam_role_policy_attachment.eks_worker, aws_iam_role_policy_attachment.eks_cni, aws_iam_role_policy_attachment.eks_ecr]
 }
@@ -93,11 +88,6 @@ resource "aws_eks_node_group" "monitor_pool" {
   }
 
   labels = { pool = "monitor" }
-  taint {
-    key    = "pool"
-    value  = "monitor"
-    effect = "NO_SCHEDULE"
-  }
 
   depends_on = [aws_iam_role_policy_attachment.eks_worker, aws_iam_role_policy_attachment.eks_cni, aws_iam_role_policy_attachment.eks_ecr]
 }
