@@ -26,7 +26,9 @@ resource "aws_iam_role" "fds_pod" {
       }
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
-        StringEquals = {
+        # StringLike, not StringEquals — StringEquals treats '*' as a literal,
+        # so a wildcard SA pattern never matches and IRSA fails with 403.
+        StringLike = {
           "${local.oidc_issuer}:sub" = "system:serviceaccount:fds:*"
         }
       }
