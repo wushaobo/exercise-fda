@@ -1,20 +1,20 @@
 # FDS — Fraud Detection Service
 
-Real-time fraud detection microservice built with Java, deployed on AWS EKS.
+Real-time fraud detection micro-service built with Java, deployed on AWS.
 
-### Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
     Upstream[Upstream Service] -->|gRPC| Facade[Sync Facade]
     Facade --> Upstream
     Facade --> Queue[AWS SQS]
-    Facade --> CloudWatch[AWS CloudWatch]
+    Facade -->|Observability| CloudWatch[AWS CloudWatch]
     Queue --> Worker[Rule Check Worker]
     Worker -->|GET denylist| Cache[(ElastiCache)]
     Worker -->|SET + PUBLISH| Cache
     Worker -->|alert| SNS[AWS SNS]
-    Worker -->CloudWatch
+    Worker -->|Observability| CloudWatch
     Cache -->|SUBSCRIBE + GET| Facade
 ```
 
@@ -32,11 +32,6 @@ flowchart TB
 | CI/CD | GitHub Actions + ArgoCD |
 | Deployment | Kubernetes (EKS), Helm|
 
-### Fraud Detection Rules
-
-- **Amount Threshold**: amount > 10,000 → SUSPICIOUS
-- **Denylist Match**: payee account in denylist → CONFIRMED_FRAUD
-
 
 ### Scripts Explanation
 
@@ -52,7 +47,7 @@ flowchart TB
 
 ### AWS Infrastructure
 - Terraform
-- VPC, EKS, SQS, ElastiCache, CloudWatch, ECR, IAM
+- VPC, EKS, SQS, ElastiCache, SNS, CloudWatch, ECR
 
 ### K8s Cluster + Observability
 
@@ -66,9 +61,14 @@ flowchart TB
 | Dashboards | CloudWatch |
 
 ## Testing
-### UT Test Coverage
+### Uint/Integration Test Coverage
+- `sync-facade`: Lines: 136/186, Instructions: 75%, Branches: 80%
+- `rule-check-worker`: Lines: 125/138, Instructions: 91%, Branches: 100%
 
 ### E2E Test Cases
+- Normal transaction → CLEAR
+- High amount (>10,000) → SUSPICIOUS
+- Denylist payee → CONFIRMED_FRAUD
 
 ### Load Test
 
