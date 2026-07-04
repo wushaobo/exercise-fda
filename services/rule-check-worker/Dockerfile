@@ -1,9 +1,9 @@
-FROM eclipse-temurin:21-jdk AS builder
+FROM eclipse-temurin:21.0.11_10-jdk-alpine AS builder
 WORKDIR /app
 
 COPY . .
 RUN ./gradlew bootJar -x test --no-daemon -q
 
-FROM eclipse-temurin:21-jre-alpine
-COPY --from=builder /app/build/libs/app.jar /app.jar
+FROM eclipse-temurin:21.0.11_10-jre-alpine
+COPY --from=builder /app/build/libs/*.jar /app.jar
 ENTRYPOINT ["java", "-jar", "/app.jar"]
