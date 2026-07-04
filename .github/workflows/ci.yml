@@ -24,7 +24,7 @@ jobs:
 
       - name: Run tests
         working-directory: services/${{ matrix.service }}
-        run: gradle test jacocoTestReport
+        run: ./gradlew test jacocoTestReport
 
       - name: Coverage summary
         working-directory: services/${{ matrix.service }}
@@ -57,11 +57,11 @@ jobs:
 
       - name: Build JARs
         run: |
-          cd services/sync-facade && gradle bootJar -x test -q
-          cd ../../services/rule-check-worker && gradle bootJar -x test -q
+          cd services/sync-facade && ./gradlew bootJar -x test -q
+          cd ../../services/rule-check-worker && ./gradlew bootJar -x test -q
 
       - name: Build e2e client
-        run: cd e2e-test && gradle build -q
+        run: cd e2e-test && ./gradlew build -q
 
       - name: Start services
         run: |
@@ -76,7 +76,7 @@ jobs:
           sleep 6
 
       - name: Run e2e tests
-        run: cd e2e-test && gradle e2eClient -q
+        run: cd e2e-test && ./gradlew e2eClient -q
 
       - name: Service logs on failure
         if: failure()

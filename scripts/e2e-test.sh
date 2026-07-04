@@ -14,13 +14,13 @@ echo "--- Building service JARs ---"
 for svc in sync-facade rule-check-worker; do
     echo "  Building $svc..."
     cd "$REPO_ROOT/services/$svc"
-    gradle bootJar -x test -q
+    ./gradlew bootJar -x test -q
 done
 
 echo ""
 echo "--- Building e2e client ---"
 cd "$REPO_ROOT/e2e-test"
-gradle build -q
+./gradlew build -q
 
 echo ""
 echo "--- Starting services ---"
@@ -38,7 +38,7 @@ sleep 6
 echo ""
 echo "--- Running e2e tests ---"
 cd "$REPO_ROOT/e2e-test"
-gradle e2eClient -q 2>&1
+./gradlew e2eClient -q 2>&1
 
 echo ""
 echo "=== E2E Complete ==="

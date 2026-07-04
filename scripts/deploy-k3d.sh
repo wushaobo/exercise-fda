@@ -74,7 +74,7 @@ kubectl -n "$NAMESPACE" port-forward svc/sync-facade 19090:9090 &
 PF_PID=$!
 sleep 3
 cd "$REPO_ROOT/e2e-test"
-gradle -Dgrpc.port=19090 e2eClient -q
+./gradlew -Dgrpc.port=19090 e2eClient -q
 kill $PF_PID 2>/dev/null || true
 
 echo ""

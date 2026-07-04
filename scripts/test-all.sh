@@ -7,21 +7,12 @@ EXIT_CODE=0
 
 echo "=== FDS Test Suite ==="
 
-echo ""
-echo "--- Building e2e-test ---"
-if cd "$REPO_ROOT/e2e-test" && gradle build -q; then
-    echo "  PASSED: e2e-test (compiled)"
-else
-    echo "  FAILED: e2e-test"
-    EXIT_CODE=1
-fi
-
 for service_dir in "$REPO_ROOT"/services/*/; do
     service_name=$(basename "$service_dir")
     echo ""
     echo "--- Testing $service_name ---"
 
-    if cd "$service_dir" && gradle test jacocoTestReport; then
+    if cd "$service_dir" && ./gradlew test jacocoTestReport; then
         echo "  PASSED: $service_name"
         echo "  Coverage report: services/$service_name/build/reports/jacoco/test/html/index.html"
 
