@@ -65,6 +65,8 @@ sqs:
 redis:
   host: fds-redis.example.com
   port: 6379
+  username: ""
+  ssl: false
   password: ""
   enabled: true
   resultChannel: fds:results

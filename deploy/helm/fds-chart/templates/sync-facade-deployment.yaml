@@ -62,6 +62,10 @@ spec:
                 secretKeyRef:
                   name: fds-secret
                   key: redis-password
+            - name: SPRING_DATA_REDIS_USERNAME
+              value: {{ .Values.redis.username | quote }}
+            - name: SPRING_DATA_REDIS_SSL_ENABLED
+              value: {{ .Values.redis.ssl | quote }}
             - name: SPRING_CLOUD_AWS_REGION_STATIC
               valueFrom:
                 configMapKeyRef:

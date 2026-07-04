@@ -34,6 +34,8 @@ sqs:
 redis:
   host: fds-redis-uat-yxfpcw.serverless.apse1.cache.amazonaws.com
   port: 6379
+  username: default              # ElastiCache Serverless RBAC user
+  ssl: true                      # ElastiCache Serverless enforces TLS
   password: ""  # in k8s secret (Terraform-managed), not here
   enabled: true
   resultChannel: fds:results
