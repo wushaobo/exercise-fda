@@ -1,0 +1,14 @@
+# Minimal ArgoCD Helm values for EKS FDS cluster.
+# All ArgoCD components tolerate the monitor-pool taint.
+global:
+  tolerations:
+    - key: pool
+      operator: Equal
+      value: monitor
+      effect: NoSchedule
+
+# Keep defaults lean — we only need the core ArgoCD components.
+# No HA, no SSO, no ingress (access via kubectl port-forward).
+configs:
+  params:
+    server.insecure: true  # no TLS inside the cluster; port-forward handles it

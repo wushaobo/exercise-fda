@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fds
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/wushaobo/exercise-fda
+    targetRevision: dev
+    path: deploy/helm/fds-chart
+    helm:
+      valueFiles:
+        - values-uat.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fds
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
