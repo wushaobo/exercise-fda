@@ -1,9 +1,6 @@
-# Fluent Bit → CloudWatch for FDS UAT
+# Fluent Bit → CloudWatch for FDS UAT (EKS).
 # helm repo add fluent https://fluent.github.io/helm-charts
-# helm install fluent-bit fluent/fluent-bit -f this-file.yaml
-#
-# IRSA: uncomment the serviceAccount section below and fill in the IAM role ARN
-# once fds-fluent-bit IAM role is created in Terraform (TODO: infra/iam.tf).
+# helm upgrade --install fluent-bit fluent/fluent-bit -n fds -f this-file.yaml
 
 config:
   service: |
@@ -37,20 +34,23 @@ config:
         region                ap-southeast-1
         log_group_name        /aws/fluent-bit/fds-uat
         log_stream_prefix     fds-
-# TODO: IRSA — create IAM role in infra/iam.tf with logs:PutLogEvents, logs:CreateLogStream,
-# logs:DescribeLogGroups on /aws/fluent-bit/fds-uat, then uncomment:
-# serviceAccount:
-#   create: true
-#   annotations:
-#     eks.amazonaws.com/role-arn: arn:aws:iam::<account>:role/fds-fluent-bit-uat
 
+# IRSA — Fluent Bit pods assume this role to write logs to CloudWatch.
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::498307943823:role/fds-fluent-bit-uat
+
+# DaemonSet runs on ALL nodes — tolerate both fds and monitor taints.
 tolerations:
   - key: pool
+    operator: Equal
+    value: fds
+    effect: NoSchedule
+  - key: pool
+    operator: Equal
     value: monitor
     effect: NoSchedule
-
-nodeSelector:
-  pool: monitor
 
 resources:
   requests:
