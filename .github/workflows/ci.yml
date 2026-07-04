@@ -55,34 +55,8 @@ jobs:
           distribution: 'temurin'
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build JARs
-        run: |
-          cd services/sync-facade && ./gradlew bootJar -x test -q
-          cd ../../services/rule-check-worker && ./gradlew bootJar -x test -q
-
-      - name: Build e2e client
-        run: cd e2e-test && ./gradlew build -q
-
-      - name: Start services
-        run: |
-          cd docker
-          docker compose up -d --build
-          sleep 30
-
-      - name: Seed denylist
-        run: |
-          cd docker
-          docker compose exec -T redis redis-cli SET fds:denylist "account-blocked-1"
-          sleep 6
-
       - name: Run e2e tests
-        run: cd e2e-test && ./gradlew e2eClient -q
-
-      - name: Service logs on failure
-        if: failure()
-        run: |
-          cd docker
-          docker compose logs --tail=50
+        run: ./scripts/e2e-test.sh
 
   deploy:
     name: Deploy to ECR

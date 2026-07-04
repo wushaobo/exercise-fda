@@ -6,7 +6,14 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "=== FDS E2E Test Suite ==="
 
-cleanup() { echo "Tearing down..."; cd "$REPO_ROOT/docker" && docker compose down 2>/dev/null; }
+cleanup() {
+  if [ $? -ne 0 ]; then
+    echo "--- Service logs (failure) ---"
+    cd "$REPO_ROOT/docker" && docker compose logs --tail=50 2>/dev/null || true
+  fi
+  echo "Tearing down..."
+  cd "$REPO_ROOT/docker" && docker compose down 2>/dev/null || true
+}
 trap cleanup EXIT
 
 echo ""
