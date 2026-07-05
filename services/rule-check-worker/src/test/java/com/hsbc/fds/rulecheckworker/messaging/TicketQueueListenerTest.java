@@ -1,9 +1,11 @@
 package com.hsbc.fds.rulecheckworker.messaging;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +16,8 @@ import com.hsbc.fds.rulecheckworker.redis.ResultPublisher;
 import com.hsbc.fds.rulecheckworker.rule.RuleEngine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -34,6 +38,9 @@ class TicketQueueListenerTest {
     @InjectMocks
     private TicketQueueListener listener;
 
+    @Captor
+    private ArgumentCaptor<DetectionResult> resultCaptor;
+
     private static final String VALID_JSON = """
             {
                 "requestId": "req-001",
@@ -41,7 +48,8 @@ class TicketQueueListenerTest {
                 "payerAccountId": "payer-1",
                 "payeeAccountId": "payee-99",
                 "amount": 50000.0,
-                "currency": "USD"
+                "currency": "USD",
+                "timestamp": 1700000000000
             }
             """;
 
@@ -54,7 +62,6 @@ class TicketQueueListenerTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Failed to process SQS message");
 
-        // Rule engine was invoked, but result publisher must NOT be called
         verify(ruleEngine).execute(any(TransactionCheckTask.class));
     }
 
@@ -69,7 +76,6 @@ class TicketQueueListenerTest {
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Failed to process SQS message");
 
-        // Both rule engine and publish were invoked
         verify(ruleEngine).execute(any(TransactionCheckTask.class));
         verify(resultPublisher).publish(any(DetectionResult.class));
     }
@@ -84,5 +90,106 @@ class TicketQueueListenerTest {
 
         verify(ruleEngine).execute(any(TransactionCheckTask.class));
         verify(resultPublisher).publish(any(DetectionResult.class));
+    }
+
+    // -- validation rejection tests --
+
+    @Test
+    void shouldPublishErrorResultWhenTransactionIdBlank() {
+        String json = """
+                {
+                    "requestId": "req-001",
+                    "transactionId": "",
+                    "payerAccountId": "payer-1",
+                    "payeeAccountId": "payee-99",
+                    "amount": 50000.0,
+                    "currency": "USD",
+                    "timestamp": 1700000000000
+                }
+                """;
+
+        assertThatCode(() -> listener.onMessage(json))
+                .doesNotThrowAnyException();
+
+        verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
+        verify(resultPublisher).publish(resultCaptor.capture());
+        DetectionResult result = resultCaptor.getValue();
+        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
+        assertThat(result.getMessage()).contains("transactionId");
+    }
+
+    @Test
+    void shouldPublishErrorResultWhenAmountNegative() {
+        String json = """
+                {
+                    "requestId": "req-001",
+                    "transactionId": "tx-001",
+                    "payerAccountId": "payer-1",
+                    "payeeAccountId": "payee-99",
+                    "amount": -100.0,
+                    "currency": "USD",
+                    "timestamp": 1700000000000
+                }
+                """;
+
+        assertThatCode(() -> listener.onMessage(json))
+                .doesNotThrowAnyException();
+
+        verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
+        verify(resultPublisher).publish(resultCaptor.capture());
+        DetectionResult result = resultCaptor.getValue();
+        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
+        assertThat(result.getMessage()).contains("amount");
+    }
+
+    @Test
+    void shouldPublishErrorResultWhenCurrencyInvalid() {
+        String json = """
+                {
+                    "requestId": "req-001",
+                    "transactionId": "tx-001",
+                    "payerAccountId": "payer-1",
+                    "payeeAccountId": "payee-99",
+                    "amount": 50000.0,
+                    "currency": "INVALID",
+                    "timestamp": 1700000000000
+                }
+                """;
+
+        assertThatCode(() -> listener.onMessage(json))
+                .doesNotThrowAnyException();
+
+        verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
+        verify(resultPublisher).publish(resultCaptor.capture());
+        DetectionResult result = resultCaptor.getValue();
+        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
+        assertThat(result.getMessage()).contains("currency");
+    }
+
+    @Test
+    void shouldPublishErrorResultWhenAmountMissing() {
+        String json = """
+                {
+                    "requestId": "req-001",
+                    "transactionId": "tx-001",
+                    "payerAccountId": "payer-1",
+                    "payeeAccountId": "payee-99",
+                    "currency": "USD",
+                    "timestamp": 1700000000000
+                }
+                """;
+
+        assertThatCode(() -> listener.onMessage(json))
+                .doesNotThrowAnyException();
+
+        verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
+        verify(resultPublisher).publish(resultCaptor.capture());
+        DetectionResult result = resultCaptor.getValue();
+        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
+        assertThat(result.getMessage()).contains("amount");
     }
 }
