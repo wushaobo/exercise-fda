@@ -45,6 +45,8 @@ flowchart TB
 
 ## Deployment
 
+See [`./GETTING_STARTED.md`](GETTING_STARTED.md) for getting started steps.
+
 ### AWS Infrastructure
 - Terraform (see [`infra/README.md`](infra/README.md))
 - VPC, EKS, SQS, ElastiCache, SNS, CloudWatch, ECR
