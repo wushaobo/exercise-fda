@@ -46,8 +46,9 @@ flowchart TB
 ## Deployment
 
 ### AWS Infrastructure
-- Terraform
+- Terraform (see [`infra/README.md`](infra/README.md))
 - VPC, EKS, SQS, ElastiCache, SNS, CloudWatch, ECR
+
 
 ### K8s Cluster + Observability
 
