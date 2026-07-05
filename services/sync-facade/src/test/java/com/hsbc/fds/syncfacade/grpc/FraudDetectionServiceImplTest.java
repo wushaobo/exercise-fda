@@ -3,7 +3,7 @@ package com.hsbc.fds.syncfacade.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.hsbc.fds.proto.FraudReason;
@@ -12,6 +12,8 @@ import com.hsbc.fds.proto.TransactionCheckRequest;
 import com.hsbc.fds.proto.TransactionCheckResponse;
 import com.hsbc.fds.syncfacade.messaging.TicketQueueService;
 import com.hsbc.fds.syncfacade.model.TransactionCheckTask;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +36,9 @@ class FraudDetectionServiceImplTest {
 
     @Captor
     private ArgumentCaptor<TransactionCheckResponse> responseCaptor;
+
+    @Captor
+    private ArgumentCaptor<Throwable> throwableCaptor;
 
     private FraudDetectionServiceImpl createService(long timeoutMillis, int maxInFlight) {
         PendingRequestRegistry registry = new PendingRequestRegistry();
@@ -158,6 +163,115 @@ class FraudDetectionServiceImplTest {
                 .setPayeeAccountId("payee-99")
                 .setAmount(50000.0)
                 .setCurrency("USD")
+                .setTimestamp(1700000000000L)
                 .build();
+    }
+
+    // -- validation tests --
+
+    @Test
+    void shouldRejectBlankTransactionIdWithInvalidArgument() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-001").toBuilder()
+                .setTransactionId("")
+                .build();
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onError(throwableCaptor.capture());
+        assertThat(throwableCaptor.getValue())
+                .isInstanceOf(StatusRuntimeException.class)
+                .matches(t -> Status.fromThrowable(t).getCode() == Status.Code.INVALID_ARGUMENT);
+        verify(ticketQueueService, never()).sendTask(any());
+    }
+
+    @Test
+    void shouldRejectNegativeAmountWithInvalidArgument() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-001").toBuilder()
+                .setAmount(-100.0)
+                .build();
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onError(throwableCaptor.capture());
+        assertThat(Status.fromThrowable(throwableCaptor.getValue()).getCode())
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        verify(ticketQueueService, never()).sendTask(any());
+    }
+
+    @Test
+    void shouldRejectNaNWithInvalidArgument() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-001").toBuilder()
+                .setAmount(Double.NaN)
+                .build();
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onError(throwableCaptor.capture());
+        assertThat(Status.fromThrowable(throwableCaptor.getValue()).getCode())
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        verify(ticketQueueService, never()).sendTask(any());
+    }
+
+    @Test
+    void shouldRejectInfinityWithInvalidArgument() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-001").toBuilder()
+                .setAmount(Double.POSITIVE_INFINITY)
+                .build();
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onError(throwableCaptor.capture());
+        assertThat(Status.fromThrowable(throwableCaptor.getValue()).getCode())
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        verify(ticketQueueService, never()).sendTask(any());
+    }
+
+    @Test
+    void shouldRejectInvalidCurrencyWithInvalidArgument() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-001").toBuilder()
+                .setCurrency("INVALID")
+                .build();
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onError(throwableCaptor.capture());
+        assertThat(Status.fromThrowable(throwableCaptor.getValue()).getCode())
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        verify(ticketQueueService, never()).sendTask(any());
+    }
+
+    @Test
+    void shouldRejectBlankPayerAccountIdWithInvalidArgument() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-001").toBuilder()
+                .setPayerAccountId("")
+                .build();
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onError(throwableCaptor.capture());
+        assertThat(Status.fromThrowable(throwableCaptor.getValue()).getCode())
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        verify(ticketQueueService, never()).sendTask(any());
+    }
+
+    @Test
+    void shouldRejectBlankPayeeAccountIdWithInvalidArgument() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-001").toBuilder()
+                .setPayeeAccountId("")
+                .build();
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onError(throwableCaptor.capture());
+        assertThat(Status.fromThrowable(throwableCaptor.getValue()).getCode())
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        verify(ticketQueueService, never()).sendTask(any());
     }
 }
