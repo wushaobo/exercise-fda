@@ -95,7 +95,7 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
         return TransactionCheckResponse.newBuilder()
                 .setTransactionId(transactionId)
                 .setVerdict(FraudVerdict.CLEAR)
-                .setReason(FraudReason.NONE)
+                .setReason(FraudReason.SYSTEM_ERROR)
                 .setMessage("Request timed out")
                 .build();
     }
@@ -104,7 +104,7 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
         return TransactionCheckResponse.newBuilder()
                 .setTransactionId(transactionId)
                 .setVerdict(FraudVerdict.CLEAR)
-                .setReason(FraudReason.NONE)
+                .setReason(FraudReason.SYSTEM_ERROR)
                 .setMessage("Internal error")
                 .build();
     }
@@ -113,7 +113,7 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
         return TransactionCheckResponse.newBuilder()
                 .setTransactionId(transactionId)
                 .setVerdict(FraudVerdict.CLEAR)
-                .setReason(FraudReason.NONE)
+                .setReason(FraudReason.SYSTEM_ERROR)
                 .setMessage("Service overloaded, request degraded")
                 .build();
     }

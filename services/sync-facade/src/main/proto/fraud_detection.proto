@@ -36,4 +36,5 @@ enum FraudReason {
     NONE = 0;
     AMOUNT_ABOVE_THRESHOLD = 1;
     PAYEE_IN_DENYLIST = 2;
+    SYSTEM_ERROR = 3;
 }

@@ -2,9 +2,11 @@ package com.hsbc.fds.syncfacade.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.hsbc.fds.proto.FraudReason;
 import com.hsbc.fds.proto.FraudVerdict;
 import com.hsbc.fds.proto.TransactionCheckRequest;
 import com.hsbc.fds.proto.TransactionCheckResponse;
@@ -127,6 +129,25 @@ class FraudDetectionServiceImplTest {
         verify(responseObserver).onNext(responseCaptor.capture());
         assertThat(responseCaptor.getValue().getMessage())
                 .isEqualTo("Service overloaded, request degraded");
+    }
+
+    @Test
+    void shouldReturnSystemErrorReasonWhenSqsSendFails() {
+        FraudDetectionServiceImpl service = createService(5000L);
+        TransactionCheckRequest request = buildRequest("tx-006");
+
+        doThrow(new RuntimeException("SQS unavailable"))
+                .when(ticketQueueService).sendTask(any(TransactionCheckTask.class));
+
+        service.checkTransaction(request, responseObserver);
+
+        verify(responseObserver).onNext(responseCaptor.capture());
+        verify(responseObserver).onCompleted();
+
+        TransactionCheckResponse response = responseCaptor.getValue();
+        assertThat(response.getVerdict()).isEqualTo(FraudVerdict.CLEAR);
+        assertThat(response.getReason()).isEqualTo(FraudReason.SYSTEM_ERROR);
+        assertThat(response.getMessage()).isEqualTo("Internal error");
     }
 
     private TransactionCheckRequest buildRequest(String txId) {
