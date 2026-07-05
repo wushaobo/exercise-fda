@@ -42,6 +42,7 @@ public class TicketQueueListener {
 
         } catch (Exception e) {
             log.error("Failed to process SQS message", e);
+            throw new RuntimeException("Failed to process SQS message", e);
         }
     }
 }
