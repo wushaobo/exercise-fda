@@ -15,7 +15,7 @@ for svc in sync-facade rule-check-worker; do
     image="${REGISTRY}/fds/${svc}:${TAG}"
     echo ""
     echo "--- Building $image ---"
-    docker build -t "$image" "$REPO_ROOT/services/$svc"
+    docker build -t "$image" -f "$REPO_ROOT/services/$svc/Dockerfile" "$REPO_ROOT/services"
     echo "  Done: $image"
 done
 
