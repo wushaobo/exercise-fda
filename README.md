@@ -67,6 +67,17 @@ flowchart TB
 - `sync-facade`: Lines: 136/186, Instructions: 75%, Branches: 80%
 - `rule-check-worker`: Lines: 125/138, Instructions: 91%, Branches: 100%
 
+#### Business Rules in Response
+
+See [`services/README.md`](services/README.md) for the complete verdict/reason mapping, input validation rules, and data flow.
+
+| Verdict | Reason | Scenario |
+|---------|--------|----------|
+| `CLEAR` | `NONE` | No fraud detected |
+| `CLEAR` | `SYSTEM_ERROR` | System fault (rate limit, timeout, validation failure) |
+| `SUSPICIOUS` | `AMOUNT_ABOVE_THRESHOLD` | Amount > 10,000 |
+| `CONFIRMED_FRAUD` | `PAYEE_IN_DENYLIST` | Payee in denylist |
+
 ### E2E Test Cases
 - Normal transaction → CLEAR
 - High amount (>10,000) → SUSPICIOUS
