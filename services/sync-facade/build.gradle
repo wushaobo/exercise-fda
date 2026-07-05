@@ -63,6 +63,13 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.testcontainers:localstack'
     testImplementation 'org.testcontainers:junit-jupiter'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Shared lib
+    implementation 'com.hsbc.fds:common'
 }
 
 protobuf {

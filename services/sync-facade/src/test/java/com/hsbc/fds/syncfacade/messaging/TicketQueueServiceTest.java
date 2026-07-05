@@ -4,7 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hsbc.fds.syncfacade.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

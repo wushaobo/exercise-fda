@@ -1,11 +1,11 @@
 package com.hsbc.fds.rulecheckworker.messaging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hsbc.fds.rulecheckworker.model.DetectionResult;
-import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.DetectionResult;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import com.hsbc.fds.rulecheckworker.redis.ResultPublisher;
 import com.hsbc.fds.rulecheckworker.rule.RuleEngine;
-import com.hsbc.fds.rulecheckworker.validation.TaskValidator;
+import com.hsbc.fds.common.validation.TaskValidator;
 import io.awspring.cloud.sqs.annotation.SqsListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

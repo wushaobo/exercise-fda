@@ -1,6 +1,6 @@
-package com.hsbc.fds.syncfacade.validation;
+package com.hsbc.fds.common.validation;
 
-import com.hsbc.fds.syncfacade.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;

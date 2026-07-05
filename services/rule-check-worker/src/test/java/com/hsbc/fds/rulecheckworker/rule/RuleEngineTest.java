@@ -2,7 +2,7 @@ package com.hsbc.fds.rulecheckworker.rule;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

@@ -1,7 +1,7 @@
 package com.hsbc.fds.rulecheckworker.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import com.hsbc.fds.rulecheckworker.redis.DenylistCache;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.junit.jupiter.api.BeforeAll;

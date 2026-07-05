@@ -1,7 +1,7 @@
 package com.hsbc.fds.rulecheckworker.rule;
 
-import com.hsbc.fds.rulecheckworker.model.DetectionResult;
-import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.DetectionResult;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import org.springframework.stereotype.Component;
 
 import java.util.Optional;

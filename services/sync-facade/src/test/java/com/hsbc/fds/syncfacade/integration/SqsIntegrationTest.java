@@ -1,7 +1,7 @@
 package com.hsbc.fds.syncfacade.integration;
 
 import com.hsbc.fds.syncfacade.messaging.TicketQueueService;
-import com.hsbc.fds.syncfacade.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -5,7 +5,7 @@ import com.hsbc.fds.proto.FraudReason;
 import com.hsbc.fds.proto.FraudVerdict;
 import com.hsbc.fds.proto.TransactionCheckResponse;
 import com.hsbc.fds.syncfacade.grpc.PendingRequestRegistry;
-import com.hsbc.fds.syncfacade.model.DetectionResult;
+import com.hsbc.fds.common.model.DetectionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

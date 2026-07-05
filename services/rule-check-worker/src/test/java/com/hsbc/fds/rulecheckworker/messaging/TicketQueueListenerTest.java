@@ -10,8 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hsbc.fds.rulecheckworker.model.DetectionResult;
-import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.DetectionResult;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import com.hsbc.fds.rulecheckworker.redis.ResultPublisher;
 import com.hsbc.fds.rulecheckworker.rule.RuleEngine;
 import org.junit.jupiter.api.Test;

@@ -2,7 +2,7 @@ package com.hsbc.fds.syncfacade.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hsbc.fds.syncfacade.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

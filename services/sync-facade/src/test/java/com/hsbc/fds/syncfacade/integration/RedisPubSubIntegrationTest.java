@@ -5,7 +5,7 @@ import com.hsbc.fds.proto.FraudReason;
 import com.hsbc.fds.proto.FraudVerdict;
 import com.hsbc.fds.proto.TransactionCheckResponse;
 import com.hsbc.fds.syncfacade.grpc.PendingRequestRegistry;
-import com.hsbc.fds.syncfacade.model.DetectionResult;
+import com.hsbc.fds.common.model.DetectionResult;
 import io.awspring.cloud.sqs.operations.SqsTemplate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

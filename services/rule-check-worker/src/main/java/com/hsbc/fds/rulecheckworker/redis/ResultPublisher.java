@@ -2,7 +2,7 @@ package com.hsbc.fds.rulecheckworker.redis;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hsbc.fds.rulecheckworker.model.DetectionResult;
+import com.hsbc.fds.common.model.DetectionResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

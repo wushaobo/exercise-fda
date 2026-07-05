@@ -11,7 +11,7 @@ import com.hsbc.fds.proto.FraudVerdict;
 import com.hsbc.fds.proto.TransactionCheckRequest;
 import com.hsbc.fds.proto.TransactionCheckResponse;
 import com.hsbc.fds.syncfacade.messaging.TicketQueueService;
-import com.hsbc.fds.syncfacade.model.TransactionCheckTask;
+import com.hsbc.fds.common.model.TransactionCheckTask;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
