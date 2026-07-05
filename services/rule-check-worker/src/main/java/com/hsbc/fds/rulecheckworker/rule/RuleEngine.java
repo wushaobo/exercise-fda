@@ -20,15 +20,35 @@ public class RuleEngine {
     }
 
     public DetectionResult execute(TransactionCheckTask task) {
+        DetectionResult worst = null;
         for (FraudRule rule : rules) {
             var result = rule.check(task);
             if (result.isPresent()) {
+                DetectionResult current = result.get();
                 log.info("Rule hit: requestId={}, verdict={}, reason={}",
-                        task.getRequestId(), result.get().getVerdict(), result.get().getReason());
-                return result.get();
+                        task.getRequestId(), current.getVerdict(), current.getReason());
+                if (worst == null || severity(current) > severity(worst)) {
+                    worst = current;
+                }
             }
+        }
+        if (worst != null) {
+            return worst;
         }
 
         return DetectionResult.clear(task.getRequestId(), task.getTransactionId());
+    }
+
+    /**
+     * Returns a numeric severity score for the verdict.
+     * Higher = more severe. Used to ensure the most severe match wins
+     * regardless of rule evaluation order.
+     */
+    private static int severity(DetectionResult r) {
+        return switch (r.getVerdict()) {
+            case "CONFIRMED_FRAUD" -> 3;
+            case "SUSPICIOUS" -> 2;
+            default -> 1;
+        };
     }
 }
