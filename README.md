@@ -58,7 +58,8 @@ flowchart TB
 | Deployment | Helm                                     |
 | GitOps     | ArgoCD                                   |
 | Logging    | Fluent Bit → CloudWatch                  |
-| Metrics    | OTel Collector → Prometheus → CloudWatch |
+| Metrics    | OTel Collector → CloudWatch EMF         |
+| Tracing    | OTel Collector → AWS X-Ray              |
 | Dashboards | CloudWatch                               |
 
 ## Testing
@@ -72,8 +73,18 @@ flowchart TB
 - Denylist payee → CONFIRMED_FRAUD
 
 ### Load Test
-Test using `ghz` from a dedicate EC2 instance in the VPC. 
 
+#### Test Environment
+**System Under Test** — EKS `ap-southeast-1`:
+fds-pool **t3.medium × 2** (ASG min=1, max=4), monitor-pool t3.medium × 1.
+sync-facade: 250m/1 CPU, 512Mi/1Gi, HPA 2→4 @ CPU 40%.
+rule-check-worker: 250m/1 CPU, 512Mi/1Gi, HPA 2→10 @ CPU 70%.
+
+**Load Generator** — EC2 **t3.medium** (2 vCPU, 4 GiB) in same VPC, **ghz** c=100, 3m, connections=4, timeout=10s against internal NLB:9090. Payload: 90/9/1 mix (CLEAR / SUSPICIOUS / CONFIRMED_FRAUD).
+
+**Seed Data** - Denylist in ElastiCache
+
+#### Test Results Summary
 | Metric  | Value    |
 | ------- | -------- |
 | Count   | 85032    |
