@@ -61,7 +61,7 @@ jobs:
   deploy:
     name: Deploy to ECR
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [test, e2e]
     permissions:
       id-token: write   # OIDC: assume GitHub Actions IRSA role
@@ -78,12 +78,12 @@ jobs:
       - name: Build and push images to ECR
         run: |
           REGISTRY=498307943823.dkr.ecr.ap-southeast-1.amazonaws.com \
-          TAG=dev-${{ github.sha }} \
+          TAG=${{ github.ref_name }}-${{ github.sha }} \
           ./scripts/build-images.sh
 
       - name: Update image tag in values-uat.yaml
         run: |
-          sed -i "s/^    tag: .*/    tag: dev-${{ github.sha }}/" \
+          sed -i "s/^    tag: .*/    tag: ${{ github.ref_name }}-${{ github.sha }}/" \
             deploy/helm/fds-chart/values-uat.yaml
           echo "Updated values-uat.yaml:"
           grep 'tag:' deploy/helm/fds-chart/values-uat.yaml
@@ -94,5 +94,5 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add deploy/helm/fds-chart/values-uat.yaml
           git diff --staged --quiet || \
-            git commit -m "ci: bump image tag to dev-${{ github.sha }} [skip ci]"
+            git commit -m "ci: bump image tag to ${{ github.ref_name }}-${{ github.sha }} [skip ci]"
           git push
