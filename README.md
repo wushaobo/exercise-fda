@@ -1,6 +1,6 @@
 # FDS — Fraud Detection Service
 
-Real-time fraud detection micro-service built with Java, deployed on AWS.
+High-available real-time fraud detection micro-service built with Java, deployed on AWS.
 
 ## Architecture
 
@@ -109,5 +109,19 @@ rule-check-worker: 250m/1 CPU, 512Mi/1Gi, HPA 2→10 @ CPU 70%.
 | Unavailable | 0.08%     |
 | RPS         | 663.34    |
 
-
 ### Resilience Test
+
+#### Pod Kill — sync-facade
+Observe gRPC high availability (UNAVAILABLE rate), client-side load-balancing failover, Deployment self-healing time, and HPA scaling response after deleting a pod.
+
+#### Pod Kill — rule-check-worker
+Observe Worker high availability (message loss/latency), visibility timeout failover, Deployment self-healing time, and HPA scaling response after deleting a pod.
+
+#### ElastiCache Connection Loss
+Block Redis via security group to verify fail-safe degradation correctness and message loss risk from incorrect ACK.
+
+#### Node Drain — fds-pool scale-in
+Node scale-in exposes missing PDB and pod anti-affinity; observe self-healing reschedule and HPA cooperation.
+
+#### SQS Send Failure - Facade → Queue
+Revoke `sqs:SendMessage` IAM permission to verify CLEAR degradation and distinguish "queue unavailable" from "Worker timeout" errors.
