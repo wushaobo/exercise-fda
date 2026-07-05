@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/wushaobo/exercise-fda
-    targetRevision: dev
+    targetRevision: main
     path: deploy/helm/fds-chart
     helm:
       valueFiles:
