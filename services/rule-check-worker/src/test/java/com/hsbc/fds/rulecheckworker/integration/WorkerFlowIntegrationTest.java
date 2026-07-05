@@ -17,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.containers.GenericContainer;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,7 +87,7 @@ class WorkerFlowIntegrationTest {
         task.setTransactionId("flow-tx-001");
         task.setPayerAccountId("payer-1");
         task.setPayeeAccountId("payee-1");
-        task.setAmount(500.0);
+        task.setAmount(new BigDecimal("500.0"));
         task.setCurrency("USD");
 
         String payload = objectMapper.writeValueAsString(task);
@@ -114,7 +115,7 @@ class WorkerFlowIntegrationTest {
         task.setTransactionId("flow-tx-002");
         task.setPayerAccountId("payer-1");
         task.setPayeeAccountId("payee-1");
-        task.setAmount(50000.0); // Above 10000 threshold
+        task.setAmount(new BigDecimal("50000.0")); // Above 10000 threshold
         task.setCurrency("USD");
 
         String payload = objectMapper.writeValueAsString(task);
@@ -141,7 +142,7 @@ class WorkerFlowIntegrationTest {
         task.setTransactionId("flow-tx-003");
         task.setPayerAccountId("payer-1");
         task.setPayeeAccountId("account-blocked-1");
-        task.setAmount(100.0);
+        task.setAmount(new BigDecimal("100.0"));
         task.setCurrency("USD");
 
         String payload = objectMapper.writeValueAsString(task);

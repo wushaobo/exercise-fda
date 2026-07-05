@@ -1,6 +1,7 @@
 package com.hsbc.fds.rulecheckworker.model;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 public class TransactionCheckTask implements Serializable {
 
@@ -8,8 +9,9 @@ public class TransactionCheckTask implements Serializable {
     private String transactionId;
     private String payerAccountId;
     private String payeeAccountId;
-    private double amount;
+    private BigDecimal amount;
     private String currency;
+    private long timestamp;
 
     public TransactionCheckTask() {
     }
@@ -26,9 +28,12 @@ public class TransactionCheckTask implements Serializable {
     public String getPayeeAccountId() { return payeeAccountId; }
     public void setPayeeAccountId(String payeeAccountId) { this.payeeAccountId = payeeAccountId; }
 
-    public double getAmount() { return amount; }
-    public void setAmount(double amount) { this.amount = amount; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
 
     public String getCurrency() { return currency; }
     public void setCurrency(String currency) { this.currency = currency; }
+
+    public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
 }

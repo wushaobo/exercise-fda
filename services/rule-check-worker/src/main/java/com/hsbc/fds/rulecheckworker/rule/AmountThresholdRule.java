@@ -5,20 +5,21 @@ import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 @Component
 public class AmountThresholdRule implements FraudRule {
 
-    private final double threshold;
+    private final BigDecimal threshold;
 
-    public AmountThresholdRule(@Value("${fds.rules.amount-threshold:10000.0}") double threshold) {
+    public AmountThresholdRule(@Value("${fds.rules.amount-threshold:10000.0}") BigDecimal threshold) {
         this.threshold = threshold;
     }
 
     @Override
     public Optional<DetectionResult> check(TransactionCheckTask task) {
-        if (task.getAmount() > threshold) {
+        if (task.getAmount().compareTo(threshold) > 0) {
             return Optional.of(DetectionResult.suspicious(
                     task.getRequestId(),
                     task.getTransactionId(),

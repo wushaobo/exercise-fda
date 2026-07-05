@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.hsbc.fds.rulecheckworker.model.TransactionCheckTask;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
@@ -12,12 +13,12 @@ class RuleEngineTest {
 
     @Test
     void shouldReturnFirstMatch() {
-        AmountThresholdRule amountRule = new AmountThresholdRule(10000.0);
+        AmountThresholdRule amountRule = new AmountThresholdRule(new BigDecimal("10000.0"));
         DenylistRule denylistRule = new DenylistRule();
         denylistRule.updateDenylist(Set.of("payee-99"));
         RuleEngine engine = new RuleEngine(List.of(amountRule, denylistRule));
 
-        TransactionCheckTask task = createTask("tx-001", "payee-99", 5000.0);
+        TransactionCheckTask task = createTask("tx-001", "payee-99", new BigDecimal("5000.0"));
 
         var result = engine.execute(task);
 
@@ -30,9 +31,10 @@ class RuleEngineTest {
     @Test
     void shouldReturnClearWhenNoRuleMatches() {
         DenylistRule denylistRule = new DenylistRule();
-        RuleEngine engine = new RuleEngine(List.of(new AmountThresholdRule(10000.0), denylistRule));
+        RuleEngine engine = new RuleEngine(List.of(
+                new AmountThresholdRule(new BigDecimal("10000.0")), denylistRule));
 
-        TransactionCheckTask task = createTask("tx-002", "payee-normal", 100.0);
+        TransactionCheckTask task = createTask("tx-002", "payee-normal", new BigDecimal("100.0"));
 
         var result = engine.execute(task);
 
@@ -41,12 +43,12 @@ class RuleEngineTest {
 
     @Test
     void shouldReturnFirstRuleMatch() {
-        AmountThresholdRule amountRule = new AmountThresholdRule(1000.0);
+        AmountThresholdRule amountRule = new AmountThresholdRule(new BigDecimal("1000.0"));
         DenylistRule denylistRule = new DenylistRule();
         denylistRule.updateDenylist(Set.of("payee-99"));
         RuleEngine engine = new RuleEngine(List.of(amountRule, denylistRule));
 
-        TransactionCheckTask task = createTask("tx-003", "payee-99", 50000.0);
+        TransactionCheckTask task = createTask("tx-003", "payee-99", new BigDecimal("50000.0"));
 
         var result = engine.execute(task);
 
@@ -54,7 +56,7 @@ class RuleEngineTest {
         assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
     }
 
-    private TransactionCheckTask createTask(String txId, String payee, double amount) {
+    private TransactionCheckTask createTask(String txId, String payee, BigDecimal amount) {
         TransactionCheckTask task = new TransactionCheckTask();
         task.setRequestId("req-1");
         task.setTransactionId(txId);
