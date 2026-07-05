@@ -1,7 +1,7 @@
 resource "aws_ecr_repository" "sync_facade" {
   name                 = "fds/sync-facade"
   image_tag_mutability = "IMMUTABLE"
-  force_delete         = false
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -11,7 +11,7 @@ resource "aws_ecr_repository" "sync_facade" {
 resource "aws_ecr_repository" "rule_check_worker" {
   name                 = "fds/rule-check-worker"
   image_tag_mutability = "IMMUTABLE"
-  force_delete         = false
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
