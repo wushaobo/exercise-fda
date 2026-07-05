@@ -72,7 +72,14 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
                 requestId, request.getTransactionId(), request.getAmount());
 
         CompletableFuture<TransactionCheckResponse> future = new CompletableFuture<>();
-        registry.register(requestId, future);
+        if (!registry.register(requestId, future)) {
+            log.error("Duplicate requestId detected, requestId={}, transactionId={}",
+                    requestId, request.getTransactionId());
+            limiter.release();
+            responseObserver.onNext(buildErrorResponse(request.getTransactionId()));
+            responseObserver.onCompleted();
+            return;
+        }
 
         try {
             BigDecimal amount = BigDecimal.valueOf(request.getAmount());

@@ -12,8 +12,13 @@ public class PendingRequestRegistry {
     private final ConcurrentHashMap<String, CompletableFuture<TransactionCheckResponse>> registry =
             new ConcurrentHashMap<>();
 
-    public void register(String requestId, CompletableFuture<TransactionCheckResponse> future) {
-        registry.put(requestId, future);
+    /**
+     * Registers a pending request. Uses putIfAbsent so the first registrant wins.
+     *
+     * @return true if registered successfully, false if the requestId already exists
+     */
+    public boolean register(String requestId, CompletableFuture<TransactionCheckResponse> future) {
+        return registry.putIfAbsent(requestId, future) == null;
     }
 
     public CompletableFuture<TransactionCheckResponse> remove(String requestId) {
