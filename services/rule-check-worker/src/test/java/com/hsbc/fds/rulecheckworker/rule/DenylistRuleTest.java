@@ -38,6 +38,16 @@ class DenylistRuleTest {
     }
 
     @Test
+    void shouldMatchCaseInsensitively() {
+        TransactionCheckTask task = createTask("tx-003", "ACCOUNT-BLACK-1");
+
+        var result = rule.check(task);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getReason()).isEqualTo("PAYEE_IN_DENYLIST");
+    }
+
+    @Test
     void shouldUpdateDenylist() {
         rule.updateDenylist(Set.of("new-account"));
 

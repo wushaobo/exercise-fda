@@ -14,7 +14,8 @@ public class DenylistRule implements FraudRule {
 
     @Override
     public Optional<DetectionResult> check(TransactionCheckTask task) {
-        if (denylist.contains(task.getPayeeAccountId())) {
+        String payee = task.getPayeeAccountId();
+        if (payee != null && denylist.contains(payee.toLowerCase())) {
             return Optional.of(DetectionResult.confirmedFraud(
                     task.getRequestId(),
                     task.getTransactionId(),

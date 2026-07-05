@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @ConditionalOnProperty(name = "fds.redis.enabled", havingValue = "true", matchIfMissing = true)
@@ -44,7 +45,10 @@ public class DenylistCache {
             String raw = redisTemplate.opsForValue().get(denylistKey);
             Set<String> accounts;
             if (raw != null && !raw.isBlank()) {
-                accounts = new HashSet<>(Arrays.asList(raw.split(",")));
+                accounts = Arrays.stream(raw.split(","))
+                        .map(String::trim)
+                        .map(String::toLowerCase)
+                        .collect(Collectors.toCollection(HashSet::new));
             } else {
                 accounts = Collections.emptySet();
             }

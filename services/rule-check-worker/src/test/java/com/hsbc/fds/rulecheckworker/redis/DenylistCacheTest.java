@@ -48,6 +48,32 @@ class DenylistCacheTest {
     }
 
     @Test
+    void shouldTrimWhitespaceAroundAccountIds() {
+        DenylistRule denylistRule = new DenylistRule();
+        DenylistCache cache = new DenylistCache(redisTemplate, denylistRule, "fds:denylist");
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("fds:denylist")).thenReturn("acc1, acc2 , acc3");
+
+        cache.refresh();
+
+        assertThat(denylistRule.getDenylist()).containsExactlyInAnyOrder("acc1", "acc2", "acc3");
+    }
+
+    @Test
+    void shouldNormalizeToLowercase() {
+        DenylistRule denylistRule = new DenylistRule();
+        DenylistCache cache = new DenylistCache(redisTemplate, denylistRule, "fds:denylist");
+
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.get("fds:denylist")).thenReturn("ACC1, acc2, Acc3");
+
+        cache.refresh();
+
+        assertThat(denylistRule.getDenylist()).containsExactlyInAnyOrder("acc1", "acc2", "acc3");
+    }
+
+    @Test
     void shouldHandleBlankRedisValue() {
         DenylistRule denylistRule = new DenylistRule();
         DenylistCache cache = new DenylistCache(redisTemplate, denylistRule, "fds:denylist");
