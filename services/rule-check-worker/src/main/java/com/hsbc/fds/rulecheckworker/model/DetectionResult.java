@@ -43,6 +43,16 @@ public class DetectionResult implements Serializable {
         return r;
     }
 
+    public static DetectionResult systemError(String requestId, String transactionId, String message) {
+        DetectionResult r = new DetectionResult();
+        r.requestId = requestId;
+        r.transactionId = transactionId;
+        r.verdict = "CLEAR";
+        r.reason = "SYSTEM_ERROR";
+        r.message = message;
+        return r;
+    }
+
     public String getRequestId() { return requestId; }
     public void setRequestId(String requestId) { this.requestId = requestId; }
 

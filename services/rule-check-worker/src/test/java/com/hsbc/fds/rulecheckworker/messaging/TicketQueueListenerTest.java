@@ -114,7 +114,7 @@ class TicketQueueListenerTest {
         verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
         verify(resultPublisher).publish(resultCaptor.capture());
         DetectionResult result = resultCaptor.getValue();
-        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getVerdict()).isEqualTo("CLEAR");
         assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
         assertThat(result.getMessage()).contains("transactionId");
     }
@@ -139,7 +139,7 @@ class TicketQueueListenerTest {
         verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
         verify(resultPublisher).publish(resultCaptor.capture());
         DetectionResult result = resultCaptor.getValue();
-        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getVerdict()).isEqualTo("CLEAR");
         assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
         assertThat(result.getMessage()).contains("amount");
     }
@@ -164,7 +164,7 @@ class TicketQueueListenerTest {
         verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
         verify(resultPublisher).publish(resultCaptor.capture());
         DetectionResult result = resultCaptor.getValue();
-        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getVerdict()).isEqualTo("CLEAR");
         assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
         assertThat(result.getMessage()).contains("currency");
     }
@@ -188,7 +188,7 @@ class TicketQueueListenerTest {
         verify(ruleEngine, never()).execute(any(TransactionCheckTask.class));
         verify(resultPublisher).publish(resultCaptor.capture());
         DetectionResult result = resultCaptor.getValue();
-        assertThat(result.getVerdict()).isEqualTo("SUSPICIOUS");
+        assertThat(result.getVerdict()).isEqualTo("CLEAR");
         assertThat(result.getReason()).isEqualTo("SYSTEM_ERROR");
         assertThat(result.getMessage()).contains("amount");
     }

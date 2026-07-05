@@ -41,9 +41,8 @@ public class TicketQueueListener {
                         task.getRequestId(), task.getTransactionId(), errors);
                 String reqId = task.getRequestId() != null ? task.getRequestId() : "unknown";
                 String txId = task.getTransactionId() != null ? task.getTransactionId() : "unknown";
-                DetectionResult errorResult = DetectionResult.suspicious(
+                DetectionResult errorResult = DetectionResult.systemError(
                         reqId, txId,
-                        "SYSTEM_ERROR",
                         "Validation failed: " + String.join("; ", errors));
                 resultPublisher.publish(errorResult);
                 return;
