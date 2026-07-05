@@ -12,6 +12,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.math.BigDecimal;
+
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 @SpringBootTest
@@ -46,7 +48,8 @@ class SqsIntegrationTest {
     @Test
     void shouldSendTaskToLocalStackSqsWithoutError() {
         TransactionCheckTask task = new TransactionCheckTask(
-                "req-int-1", "tx-001", "payer-1", "payee-99", 50000.0, "USD");
+                "req-int-1", "tx-001", "payer-1", "payee-99",
+                new BigDecimal("50000.0"), "USD", 1700000000000L);
 
         assertThatCode(() -> ticketQueueService.sendTask(task))
                 .doesNotThrowAnyException();

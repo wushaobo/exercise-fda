@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -63,8 +64,9 @@ public class FraudDetectionServiceImpl extends FraudDetectionServiceGrpc.FraudDe
                     request.getTransactionId(),
                     request.getPayerAccountId(),
                     request.getPayeeAccountId(),
-                    request.getAmount(),
-                    request.getCurrency()
+                    BigDecimal.valueOf(request.getAmount()),
+                    request.getCurrency(),
+                    request.getTimestamp()
             );
             ticketQueueService.sendTask(task);
 

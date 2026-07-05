@@ -17,6 +17,8 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
+
 @ExtendWith(MockitoExtension.class)
 class TicketQueueServiceTest {
 
@@ -35,7 +37,8 @@ class TicketQueueServiceTest {
     @Test
     void shouldSendSerializedTaskToSqs() {
         TransactionCheckTask task = new TransactionCheckTask(
-                "req-123", "tx-001", "payer-1", "payee-99", 50000.0, "USD");
+                "req-123", "tx-001", "payer-1", "payee-99",
+                new BigDecimal("50000.0"), "USD", 1700000000000L);
 
         ticketQueueService.sendTask(task);
 
@@ -45,7 +48,8 @@ class TicketQueueServiceTest {
     @Test
     void shouldSendValidJsonPayload() {
         TransactionCheckTask task = new TransactionCheckTask(
-                "req-123", "tx-001", "payer-1", "payee-99", 50000.0, "USD");
+                "req-123", "tx-001", "payer-1", "payee-99",
+                new BigDecimal("50000.0"), "USD", 1700000000000L);
 
         ticketQueueService.sendTask(task);
 
