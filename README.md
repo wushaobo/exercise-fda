@@ -98,15 +98,16 @@ rule-check-worker: 250m/1 CPU, 512Mi/1Gi, HPA 2→10 @ CPU 70%.
 **Seed Data** - Denylist in ElastiCache
 
 #### Test Results Summary
-| Metric  | Value    |
-| ------- | -------- |
-| Count   | 85032    |
-| Total   | 180.00s  |
-| Fastest | 5.17ms   |
-| P10     | 103.83ms |
-| P95     | 778.34ms |
-| P99     | 1.14s    |
-| Slowest | 8.66s    |
-| RPS     | 472.40   |
+| Metric      | Value     |
+| ----------- | --------- |
+| Count       | 119398    |
+| Total       | 180.00 s  |
+| Average     | 150.48 ms |
+| 90%         | 344.46 ms |
+| 95%         | 455.70 ms |
+| 99%         | 511.92 ms |
+| Unavailable | 0.08%     |
+| RPS         | 663.34    |
+
 
 ### Resilience Test

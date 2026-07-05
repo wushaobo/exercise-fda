@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 @ConditionalOnProperty(name = "fds.grpc.enabled", havingValue = "true", matchIfMissing = true)
@@ -32,6 +33,12 @@ public class GrpcServerConfig {
         return ServerBuilder.forPort(port)
                 .addService(fraudDetectionService)
                 .addService(healthMgr.getHealthService())
+                .keepAliveTime(30, TimeUnit.SECONDS)
+                .keepAliveTimeout(2, TimeUnit.SECONDS)
+                .permitKeepAliveWithoutCalls(true)
+                .permitKeepAliveTime(10, TimeUnit.SECONDS)
+                .maxConnectionAge(5, TimeUnit.MINUTES)
+                .maxConnectionAgeGrace(30, TimeUnit.SECONDS)
                 .build()
                 .start();
     }
