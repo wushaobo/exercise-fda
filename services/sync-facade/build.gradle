@@ -5,6 +5,7 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.7'
     id 'com.google.protobuf' version '0.9.6'
     id 'idea'
+    id 'com.diffplug.spotless' version '7.0.0'
 }
 
 group = 'com.hsbc.fds'
@@ -100,5 +101,11 @@ jacocoTestReport {
         classDirectories.setFrom(files(classDirectories.files.collect {
             fileTree(dir: it, exclude: ['com/hsbc/fds/proto/**'])
         }))
+    }
+}
+
+spotless {
+    java {
+        removeUnusedImports()
     }
 }

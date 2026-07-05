@@ -24,6 +24,8 @@ for service_dir in "$REPO_ROOT"/services/*/; do
                 | tr -d ',' \
                 | awk '{ printf "  Lines: %d/%.0f, Instructions: %s, Branches: %s\n", $13-$12, $13, $5, $9 }'
         fi
+
+        ./gradlew spotlessApply
     else
         echo "  FAILED: $service_name"
         EXIT_CODE=1
