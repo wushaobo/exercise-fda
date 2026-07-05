@@ -12,7 +12,7 @@ for service_dir in "$REPO_ROOT"/services/*/; do
     echo ""
     echo "--- Testing $service_name ---"
 
-    if cd "$service_dir" && ./gradlew test jacocoTestReport; then
+    if cd "$service_dir" && ./gradlew -q test jacocoTestReport; then
         echo "  PASSED: $service_name"
         echo "  Coverage report: services/$service_name/build/reports/jacoco/test/html/index.html"
 
@@ -25,7 +25,7 @@ for service_dir in "$REPO_ROOT"/services/*/; do
                 | awk '{ printf "  Lines: %d/%.0f, Instructions: %s, Branches: %s\n", $13-$12, $13, $5, $9 }'
         fi
 
-        ./gradlew spotlessApply
+        ./gradlew -q spotlessApply
     else
         echo "  FAILED: $service_name"
         EXIT_CODE=1
