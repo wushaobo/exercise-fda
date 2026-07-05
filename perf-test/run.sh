@@ -1,21 +1,15 @@
 #!/usr/bin/env bash
 #
-# FDS perf test runner — local one-shot entry.
-#
-# Pre-generates a 90/9/1 mixed request array, seeds the Redis denylist, exposes
-# sync-facade via an internal NLB, runs ghz on an isolated same-VPC EC2 against
-# the NLB, copies the HTML report back, then cleans up. User runs only this.
+# FDS perf test runner.
 #
 # Usage:
-#   ./perf-test/run.sh                       # default: c=100, 3m
-#   CONCURRENCY=1 DURATION=5s ./perf-test/run.sh   # smoke test
-#   N=5000 CONCURRENCY=200 ./perf-test/run.sh
+#   ./run.sh                # all-in-one: prepare + exec + cleanup
+#   ./run.sh prepare        # setup payload, Redis denylist, NLB, upload files
+#   ./run.sh exec           # run ghz (repeatable with different env vars)
+#   ./run.sh cleanup        # tear down NLB, stop HPA watch, remove temp files
 #
-# Prereq:
-#   - terraform apply (ghz_runner EC2 + CloudWatch dashboard).
-#   - ghz binary installed on the EC2 (manually). If not on $PATH, run with
-#     GHZ_BIN=<path-to-ghz> ./perf-test/run.sh
-#   See .claude/perf-test-plan.md.
+# Env vars (exec):
+#   CONCURRENCY=100  DURATION=3m  N=1000  CONNECTIONS=4  SKIPFIRST=10
 #
 set -euo pipefail
 
@@ -23,135 +17,204 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INFRA_DIR="$REPO_ROOT/infra"
 NS="${NAMESPACE:-fds}"
-CONCURRENCY="${CONCURRENCY:-100}"
-DURATION="${DURATION:-3m}"
-N="${N:-1000}"
-# ghz binary path on the EC2 (user installs manually). Override if not on PATH:
-#   GHZ_BIN=~/ghz ./perf-test/run.sh
-GHZ_BIN="${GHZ_BIN:-ghz}"
-CONNECTIONS="${CONNECTIONS:-4}"
-SKIPFIRST="${SKIPFIRST:-10}"   # warmup requests excluded from stats; set 0 for smoke
 RESULTS_DIR="$SCRIPT_DIR/results"
-TS="$(date +%Y%m%d-%H%M%S)"
-HPA_LOG="$RESULTS_DIR/hpa-$TS.log"
-KEY_FILE="/tmp/ghz-key-$$"
-REMOTE_DIR="/home/ec2-user"
+STATE_FILE="$RESULTS_DIR/.test-state"
 
 mkdir -p "$RESULTS_DIR"
 
-echo "=== FDS perf test ==="
-echo "  mix:           90/9/1 (clear/suspicious/fraud), N=$N"
-echo "  concurrency:   $CONCURRENCY"
-echo "  duration:      $DURATION"
-echo "  results:       $RESULTS_DIR"
-echo ""
+# --- helpers ---------------------------------------------------------
 
-# --- 0. fetch EC2 IP + ssh key from terraform ---
-echo "--- Fetching ghz runner EC2 IP + key ---"
-EC2_IP="$(terraform -chdir="$INFRA_DIR" output -raw ghz_runner_public_ip)"
-terraform -chdir="$INFRA_DIR" output -raw ghz_runner_private_key > "$KEY_FILE"
-chmod 600 "$KEY_FILE"
-SSH="ssh -i $KEY_FILE -o StrictHostKeyChecking=no -o ConnectTimeout=10 ec2-user@$EC2_IP"
-SCP="scp -i $KEY_FILE -o StrictHostKeyChecking=no"
-echo "  EC2: $EC2_IP"
+die() { echo "ERROR: $*" >&2; exit 1; }
 
-cleanup() {
+load_state() {
+  [ -f "$STATE_FILE" ] || die "no .test-state found; run './run.sh prepare' first"
+  source "$STATE_FILE"
+  [ -n "${EC2_IP:-}" ] && [ -n "${KEY_FILE:-}" ] && [ -n "${NLB_DNS:-}" ] \
+    || die ".test-state is corrupt; run './run.sh cleanup' and retry"
+}
+
+ssh_cmd()  { ssh -i "$KEY_FILE" -o StrictHostKeyChecking=no -o ConnectTimeout=10 ec2-user@"$EC2_IP" "$@"; }
+scp_cmd()  { scp -i "$KEY_FILE" -o StrictHostKeyChecking=no "$@"; }
+
+# --- prepare ---------------------------------------------------------
+
+cmd_prepare() {
+  [ -f "$STATE_FILE" ] && die ".test-state already exists; run './run.sh cleanup' first"
+
+  local CONCURRENCY="${CONCURRENCY:-100}" DURATION="${DURATION:-3m}" N="${N:-1000}"
+  echo "=== prepare: FDS perf test ==="
+  echo "  mix: 90/9/1 (clear/suspicious/fraud), N=$N"
   echo ""
-  echo "--- Cleanup ---"
+
+  # 0. fetch EC2 IP + ssh key
+  echo "--- Fetching ghz runner EC2 IP + key ---"
+  local EC2_IP KEY_FILE
+  EC2_IP="$(terraform -chdir="$INFRA_DIR" output -raw ghz_runner_public_ip)"
+  KEY_FILE="/tmp/ghz-key-$$"
+  terraform -chdir="$INFRA_DIR" output -raw ghz_runner_private_key > "$KEY_FILE"
+  chmod 600 "$KEY_FILE"
+  echo "  EC2: $EC2_IP"
+
+  # 1. generate payload
+  echo "--- Generating 90/9/1 payload array ($N) ---"
+  python3 "$SCRIPT_DIR/gen-payload.py" "$N" > "$RESULTS_DIR/payload.json"
+  PAYLOAD_COUNT=$(python3 -c "import json; print(len(json.load(open('$RESULTS_DIR/payload.json'))))")
+  echo "  $PAYLOAD_COUNT requests generated"
+
+  # 2. seed denylist
+  echo "--- Seeding ElastiCache denylist (account-blocked-1,2) ---"
+  local REDIS_HOST REDIS_PASS
+  REDIS_HOST="$(terraform -chdir="$INFRA_DIR" output -raw redis_endpoint)"
+  REDIS_PASS="$(kubectl -n "$NS" get secret fds-secret -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d 2>/dev/null || true)"
+  [ -z "$REDIS_PASS" ] && echo "  WARN: could not read redis password; fraud path may not trigger"
+  kubectl -n "$NS" run redis-seed --rm -i --restart=Never --image=redis:alpine -- \
+    redis-cli --tls --user default -a "$REDIS_PASS" -h "$REDIS_HOST" \
+    SET fds:denylist "account-blocked-1,account-blocked-2" >/dev/null 2>&1 || \
+    echo "  WARN: denylist seed failed (continuing)"
+  echo "  waiting 65s for rule-check-worker DenylistCache refresh..."
+  sleep 65
+
+  # 3. create NLB
+  echo "--- Applying sync-facade internal NLB ---"
+  kubectl -n "$NS" apply -f "$SCRIPT_DIR/nlb-service.yaml"
+  echo "  waiting for NLB DNS..."
+  local NLB_DNS=""
+  for i in $(seq 1 40); do
+    NLB_DNS="$(kubectl -n "$NS" get svc sync-facade-nlb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
+    [ -n "$NLB_DNS" ] && break
+    sleep 5
+  done
+  [ -z "$NLB_DNS" ] && die "NLB DNS not ready"
+  echo "  NLB: $NLB_DNS:9090"
+
+  echo "  waiting for NLB DNS to resolve on EC2..."
+  for i in $(seq 1 60); do
+    ssh_cmd "resolvectl flush-caches 2>/dev/null || systemd-resolve --flush-caches 2>/dev/null; getent hosts $NLB_DNS" >/dev/null 2>&1 && { echo "  DNS resolved on EC2 (after $((i*5))s)"; break; }
+    sleep 5
+  done
+  ssh_cmd "getent hosts $NLB_DNS" >/dev/null 2>&1 || die "NLB DNS not resolving on EC2 after 300s"
+
+  # 4. upload payload + proto
+  echo "--- Uploading payload + proto to EC2 ---"
+  scp_cmd "$RESULTS_DIR/payload.json" "$SCRIPT_DIR/protos/fraud_detection.proto" "ec2-user@$EC2_IP:$REMOTE_DIR/"
+
+  # save state
+  cat > "$STATE_FILE" <<EOF
+EC2_IP=$EC2_IP
+KEY_FILE=$KEY_FILE
+NLB_DNS=$NLB_DNS
+REMOTE_DIR=$REMOTE_DIR
+EOF
+  echo ""
+  echo "=== prepare done ==="
+  echo "  state: $STATE_FILE"
+  echo "  next:  CONCURRENCY=100 DURATION=3m ./run.sh exec"
+}
+
+# --- exec ------------------------------------------------------------
+
+cmd_exec() {
+  load_state
+
+  local CONCURRENCY="${CONCURRENCY:-100}"
+  local DURATION="${DURATION:-3m}"
+  local N="${N:-1000}"
+  local CONNECTIONS="${CONNECTIONS:-4}"
+  local SKIPFIRST="${SKIPFIRST:-10}"
+  local GHZ_BIN="${GHZ_BIN:-ghz}"
+  local TS="$(date +%Y%m%d-%H%M%S)"
+  local HPA_LOG="$RESULTS_DIR/hpa-$TS.log"
+
+  echo "=== exec: ghz test ==="
+  echo "  concurrency: $CONCURRENCY, duration: $DURATION, connections: $CONNECTIONS"
+  echo "  NLB: $NLB_DNS:9090"
+  echo ""
+
+  # regenerate payload if N changed vs state
+  local REGEN="${REGEN:-}"
+  if [ -n "$REGEN" ] || [ ! -f "$RESULTS_DIR/payload.json" ]; then
+    echo "--- Regenerating payload (N=$N) ---"
+    python3 "$SCRIPT_DIR/gen-payload.py" "$N" > "$RESULTS_DIR/payload.json"
+    scp_cmd "$RESULTS_DIR/payload.json" "ec2-user@$EC2_IP:$REMOTE_DIR/"
+  fi
+
+  # HPA watch (background)
+  echo "--- HPA watch → $HPA_LOG ---"
+  kubectl -n "$NS" get hpa sync-facade -w > "$HPA_LOG" 2>&1 &
+  local HPA_PID=$!
+
+  # verify ghz
+  echo "--- Checking ghz on EC2 ($GHZ_BIN) ---"
+  for i in $(seq 1 30); do
+    if ssh_cmd "$GHZ_BIN --version" >/dev/null 2>&1; then echo "  ghz ready"; break; fi
+    sleep 5
+  done
+  ssh_cmd "$GHZ_BIN --version" >/dev/null 2>&1 || die "ghz not found at '$GHZ_BIN' on EC2"
+
+  # run ghz
+  local CONNS=$(( CONCURRENCY < CONNECTIONS ? CONCURRENCY : CONNECTIONS ))
+  echo "--- ghz: c=$CONCURRENCY for $DURATION against $NLB_DNS:9090 ---"
+  ssh_cmd "$GHZ_BIN \
+    --proto=$REMOTE_DIR/fraud_detection.proto \
+    --call=com.hsbc.fds.FraudDetectionService/CheckTransaction \
+    --data-file=$REMOTE_DIR/payload.json \
+    --insecure \
+    --concurrency=$CONCURRENCY \
+    --duration=$DURATION \
+    --timeout=10s \
+    --skipFirst=$SKIPFIRST \
+    --count-errors \
+    --connections=$CONNS \
+    --output=$REMOTE_DIR/report.html \
+    --format=html \
+    $NLB_DNS:9090" 2>&1 | tee "$RESULTS_DIR/ghz-stdout-$TS.log"
+
+  # fetch report
+  echo "--- Fetching report ---"
+  scp_cmd "ec2-user@$EC2_IP:$REMOTE_DIR/report.html" "$RESULTS_DIR/report-$TS.html" 2>/dev/null || \
+    echo "  (no report.html fetched; see ghz-stdout log)"
+
+  # stop HPA watch
   kill "${HPA_PID:-}" 2>/dev/null || true
+
+  echo ""
+  echo "=== exec done ==="
+  echo "  HPA log:    $HPA_LOG"
+  echo "  report:     $RESULTS_DIR/report-$TS.html"
+  echo "  ghz stdout: $RESULTS_DIR/ghz-stdout-$TS.log"
+  echo "  Dashboard:  https://ap-southeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-southeast-1#dashboards:name=fds-uat"
+}
+
+# --- cleanup ----------------------------------------------------------
+
+cmd_cleanup() {
+  echo "=== cleanup ==="
+
+  if [ -f "$STATE_FILE" ]; then
+    load_state
+    rm -f "$KEY_FILE"
+    echo "  removed key: $KEY_FILE"
+  else
+    # best-effort: clean up NLB even without state
+    echo "  (no .test-state; cleaning NLB best-effort)"
+  fi
+
   kubectl -n "$NS" delete -f "$SCRIPT_DIR/nlb-service.yaml" --ignore-not-found >/dev/null 2>&1 || true
   kubectl -n "$NS" delete pod redis-seed --ignore-not-found >/dev/null 2>&1 || true
-  rm -f "$KEY_FILE"
+  rm -f "$STATE_FILE"
+  echo "  removed: NLB, redis-seed pod, .test-state"
+  echo "=== cleanup done ==="
 }
-trap cleanup EXIT
 
-# --- 1. pre-generate payload ---
-echo "--- Generating 90/9/1 payload array ($N) ---"
-python3 "$SCRIPT_DIR/gen-payload.py" "$N" > "$RESULTS_DIR/payload.json"
+# --- dispatch ---------------------------------------------------------
 
-# --- 2. seed denylist (fraud path) ---
-# The temp redis:alpine pod runs on an EKS node (private subnet) which the
-# ElastiCache SG already allows in; -h points at the cluster Elasticache, so the
-# pod is just a VPC-internal redis-cli jump-box (local Mac is outside the VPC).
-# DenylistCache parses the value with raw.split(","), so comma-separated string
-# matches WorkerFlowIntegrationTest's seed format.
-echo "--- Seeding Elasticache denylist (account-blocked-1,2) ---"
-REDIS_HOST="$(terraform -chdir="$INFRA_DIR" output -raw redis_endpoint)"
-REDIS_PASS="$(kubectl -n "$NS" get secret fds-secret -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d 2>/dev/null || true)"
-if [ -z "$REDIS_PASS" ]; then
-  echo "  WARN: could not read redis password from fds-secret; fraud path may not trigger"
-fi
-kubectl -n "$NS" run redis-seed --rm -i --restart=Never --image=redis:alpine -- \
-  redis-cli --tls --user default -a "$REDIS_PASS" -h "$REDIS_HOST" \
-  SET fds:denylist "account-blocked-1,account-blocked-2" >/dev/null 2>&1 || \
-  echo "  WARN: denylist seed failed (continuing)"
-echo "  waiting 65s for rule-check-worker DenylistCache refresh..."
-sleep 65
+REMOTE_DIR="/home/ec2-user"
+CMD="${1:-all}"
 
-# --- 3. NLB ---
-echo "--- Applying sync-facade internal NLB ---"
-kubectl -n "$NS" apply -f "$SCRIPT_DIR/nlb-service.yaml"
-echo "  waiting for NLB DNS..."
-NLB_DNS=""
-for i in $(seq 1 40); do
-  NLB_DNS="$(kubectl -n "$NS" get svc sync-facade-nlb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)"
-  [ -n "$NLB_DNS" ] && break
-  sleep 5
-done
-[ -z "$NLB_DNS" ] && { echo "  NLB DNS not ready, aborting"; exit 1; }
-echo "  NLB: $NLB_DNS:9090"
-echo "  waiting for NLB DNS to resolve on EC2 (flush cache each try to dodge negative TTL)..."
-for i in $(seq 1 60); do
-  $SSH "resolvectl flush-caches 2>/dev/null || systemd-resolve --flush-caches 2>/dev/null; getent hosts $NLB_DNS" >/dev/null 2>&1 && { echo "  DNS resolved on EC2 (after $((i*5))s)"; break; }
-  sleep 5
-done
-$SSH "getent hosts $NLB_DNS" >/dev/null 2>&1 || { echo "  NLB DNS still not resolving on EC2 after 300s, aborting"; exit 1; }
-
-# --- 4. HPA watch (background, own PID) ---
-echo "--- HPA watch → $HPA_LOG ---"
-kubectl -n "$NS" get hpa sync-facade -w > "$HPA_LOG" 2>&1 &
-HPA_PID=$!
-
-# --- 5. wait for ghz binary on EC2 ---
-echo "--- Waiting for ghz on EC2 ($GHZ_BIN) ---"
-for i in $(seq 1 30); do
-  if $SSH "$GHZ_BIN --version" >/dev/null 2>&1; then echo "  ghz ready"; break; fi
-  sleep 5
-done
-$SSH "$GHZ_BIN --version" >/dev/null 2>&1 || { echo "  ghz not found at '$GHZ_BIN' on EC2; set GHZ_BIN=<path> and rerun"; exit 1; }
-
-# --- 6. upload payload + proto ---
-echo "--- Uploading payload + proto to EC2 ---"
-$SCP "$RESULTS_DIR/payload.json" "$SCRIPT_DIR/protos/fraud_detection.proto" "ec2-user@$EC2_IP:$REMOTE_DIR/"
-
-# --- 7. run ghz ---
-echo "--- ghz: c=$CONCURRENCY for $DURATION against $NLB_DNS:9090 ---"
-# ghz rejects connections > concurrency; clamp to min(concurrency, connections)
-CONNS=$(( CONCURRENCY < CONNECTIONS ? CONCURRENCY : CONNECTIONS ))
-$SSH "$GHZ_BIN \
-  --proto=$REMOTE_DIR/fraud_detection.proto \
-  --call=com.hsbc.fds.FraudDetectionService/CheckTransaction \
-  --data-file=$REMOTE_DIR/payload.json \
-  --insecure \
-  --concurrency=$CONCURRENCY \
-  --duration=$DURATION \
-  --timeout=10s \
-  --skipFirst=$SKIPFIRST \
-  --count-errors \
-  --connections=$CONNS \
-  --output=$REMOTE_DIR/report.html \
-  --format=html \
-  $NLB_DNS:9090" 2>&1 | tee "$RESULTS_DIR/ghz-stdout-$TS.log"
-
-# --- 8. fetch report ---
-echo "--- Fetching report ---"
-$SCP "ec2-user@$EC2_IP:$REMOTE_DIR/report.html" "$RESULTS_DIR/report-$TS.html" 2>/dev/null || \
-  echo "  (no report.html fetched; see ghz-stdout log)"
-
-echo ""
-echo "=== Done ==="
-echo "  HPA log:   $HPA_LOG"
-echo "  ghz stdout: $RESULTS_DIR/ghz-stdout-$TS.log"
-echo "  report:    $RESULTS_DIR/report-$TS.html"
-echo ""
-echo "Dashboard:  https://ap-southeast-1.console.aws.amazon.com/cloudwatch/home?region=ap-southeast-1#dashboards:name=fds-uat"
+case "$CMD" in
+  prepare) cmd_prepare ;;
+  exec)    cmd_exec ;;
+  cleanup) cmd_cleanup ;;
+  all)     cmd_prepare && cmd_exec && cmd_cleanup ;;
+  *)       die "unknown command: $CMD (valid: prepare, exec, cleanup)" ;;
+esac
